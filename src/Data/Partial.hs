@@ -20,12 +20,12 @@ import Data.Maybe (fromMaybe)
 import Data.Proxy (Proxy (..))
 import Data.Void (Void)
 import GHC.Generics
-import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
+import GHC.TypeLits (type (<=?), type (+), type (-), KnownSymbol, Nat, Symbol, symbolVal)
 import Test.QuickCheck.Arbitrary (Arbitrary (..))
 import Test.QuickCheck.Gen (Gen)
 
 -- $setup
--- >>> :set -XDataKinds -XDeriveGeneric -XFlexibleContexts -XTypeApplications
+-- >>> :set -XDeriveGeneric
 --
 -- >>> :{
 -- data A
@@ -43,7 +43,7 @@ import Test.QuickCheck.Gen (Gen)
 -- :}
 --
 -- >>> import Control.Lens
--- >>> import Data.Function ((&))
+-- >>> import Data.Function ((&), on)
 -- >>> import Test.QuickCheck.Arbitrary
 --
 -- >>> :{
@@ -56,10 +56,15 @@ import Test.QuickCheck.Gen (Gen)
 --   arbitrary = Triple <$> arbitrary <*> arbitrary <*> arbitrary
 -- :}
 
+-- | Nothing too exciting; this synonym just makes our signatures look a little
+-- less intimidating to users. The inside of a 'Partial' type is effectively a
+-- value of this type constructor.
+type Partial_ (structure :: Type)
+  = GPartial_ (Rep structure)
 
-type family Partial_ (structure :: Type) :: Type -> Type where
-  Partial_ structure = GPartial_ (Rep structure)
-
+-- | Given an /actual/ generic rep, create a "partial" rep: effectively, all
+-- the 'K1'-wrapped values are further wrapped in 'Maybe'. Otherwise, we leave
+-- the rep undisturbed.
 type family GPartial_ (rep :: Type -> Type) :: Type -> Type where
   GPartial_ (M1 index meta inner) = M1 index meta (GPartial_ inner)
   GPartial_ (left :*: right)      = GPartial_ left :*: GPartial_ right
@@ -67,23 +72,25 @@ type family GPartial_ (rep :: Type -> Type) :: Type -> Type where
   GPartial_  U1                   = U1
   GPartial_  V1                   = V1
 
+-- | A @Partial X@ is a representation of @X@ in which its parameters needn't
+-- all be present. This can be inspected and manipulated in a partial state,
+-- and we can try to reconstruct our @X@ from the partial data that we have.
 newtype Partial (structure :: Type)
-  = Partial { runPartial :: Partial_ structure Void }
+  = Partial
+      { runPartial :: Partial_ structure Void
+      }
 
----
-
--- |
--- >>> mempty @(Partial A) == mempty
--- True
+-- | Partial structures have an 'Eq' instance providing that all the
+-- parameters' types have an 'Eq' instance as well.
 --
--- >>> mempty @(Partial B) == mempty
--- True
---
--- prop> x == (x :: A)
--- prop> x == (x :: B)
---
+-- prop>  x       == (x :: A)
 -- prop> (x == y) == (toPartial x == toPartial (y :: A))
+--
+-- prop>  x       == (x :: B)
 -- prop> (x == y) == (toPartial x == toPartial (y :: B))
+--
+-- prop> if x == y && y == z then x == (z :: Partial A) else True
+-- prop> if x == y && y == z then x == (z :: Partial B) else True
 class GEq (rep :: Type -> Type) where
   geq :: rep p -> rep q -> Bool
 
@@ -101,15 +108,15 @@ instance (Generic structure, GEq (Partial_ structure))
     => Eq (Partial structure) where
   Partial x == Partial y = geq x y
 
--- |
--- >>> compare mempty (mempty @(Partial A))
--- EQ
+-- | Similarly, partial structures have an ordering if all parameters are also
+-- instances of 'Ord'. Note that an "empty" parameter is /less than/ a
+-- completed parameter due to the 'Ord' instance of 'Maybe'.
 --
--- >>> compare mempty (mempty @(Partial B))
--- EQ
+-- prop> compare x y == (compare `on` toPartial) x (y :: A)
+-- prop> compare x y == (compare `on` toPartial) x (y :: B)
 --
--- prop> compare x y == compare (toPartial x) (toPartial (y :: A))
--- prop> compare x y == compare (toPartial x) (toPartial (y :: B))
+-- prop> if x <= y && y <= z then x <= (z :: Partial A) else True
+-- prop> if x <= y && y <= z then x <= (z :: Partial B) else True
 class GEq rep => GOrd (rep :: Type -> Type) where
   gcompare :: rep p -> rep q -> Ordering
 
@@ -127,9 +134,18 @@ instance (Generic structure, GOrd (Partial_ structure))
     => Ord (Partial structure) where
   compare (Partial x) (Partial y) = gcompare x y
 
--- |
+-- | Partial structures form a semigroup by taking the (right-biased) union of
+-- partial data.
+--
 -- prop> x <> (y <> z) == (x <> y) <> (z :: Partial A)
 -- prop> x <> (y <> z) == (x <> y) <> (z :: Partial B)
+--
+-- Furthermore, this operation is idempotent, meaning that partial structures
+-- actually form a band (non-commutative semi-lattice), if Google is to be
+-- trusted.
+--
+-- prop> x <> y <> y == x <> (y :: Partial A)
+-- prop> x <> y <> y == x <> (y :: Partial B)
 class GSemigroup (rep :: Type -> Type) where
   gmappend :: rep p -> rep q -> rep r
 
@@ -152,7 +168,9 @@ instance (Generic structure, GSemigroup (Partial_ structure))
   Partial x <> Partial y
     = Partial (gmappend x y)
 
--- |
+-- | Partial structures form a monoid if the unit element is a partial
+-- structure with no completed fields.
+--
 -- prop> mempty <> x == (x :: Partial A)
 -- prop> mempty <> x == (x :: Partial B)
 --
@@ -180,36 +198,31 @@ instance (Generic structure, GMonoid (Partial_ structure))
     => Monoid (Partial structure) where
   mempty = Partial gmempty
 
----
-
-type family Field (field :: Symbol) (rep :: Type -> Type) :: Maybe Type where
-  Field field (S1 ('MetaSel ('Just field) _ _ _) (Rec0 (Maybe focus)))
-    = 'Just focus
-
-  Field _ (S1 _ _)
-    = 'Nothing
-
-  Field field (M1 _ _ inner)
-    = Field field inner
-
-  Field field (left :*: right)
-    = Field field left <|> Field field right
-
-  Field _ _
-    = 'Nothing
-
-type family (x :: Maybe k) <|> (y :: Maybe k) :: Maybe k where
-  'Just x <|> y = 'Just x
-  _       <|> y =  y
-
-
--- |
+-- | For types with named fields, we can use a 'Control.Lens.Lens' to access
+-- the partial fields. Note that we use a 'Control.Lens.Lens' to the 'Maybe'
+-- rather than a 'Control.Lens.Prism' because we want the option to "remove"
+-- partial data by setting a field to 'Nothing'.
+--
+-- >>> :set -XDataKinds -XTypeApplications
+--
 -- prop> ((p :: Partial A) & field @"name" .~ x) ^. field @"name" == x
 -- prop> (p & field @"name" .~ (p ^. field @"name")) == (p :: Partial A)
 -- prop> ((p & field @"name" .~ x) & field @"name" .~ y) == ((p :: Partial A) & field @"name" .~ y)
 class HasField' (field :: Symbol) (structure :: Type) (focus :: Type)
     | field structure -> focus where
   field :: Lens' (Partial structure) (Maybe focus)
+
+type family Field (field :: Symbol) (rep :: Type -> Type) :: Maybe Type where
+  Field name (S1   (_ ('Just name) _ _ _) (Rec0 (Maybe focus))) = 'Just focus
+  Field _    (S1    _                      _                  ) = 'Nothing
+  Field name (M1 _  _                      xs                 ) = Field name xs
+
+  Field field (left :*: right) = Field field left <|> Field field right
+  Field _      _               = 'Nothing
+
+type family (x :: Maybe k) <|> (y :: Maybe k) :: Maybe k where
+  'Just x <|> y = 'Just x
+  _       <|> y =  y
 
 class GHasField' (field :: Symbol) (rep :: Type -> Type) (focus :: Type)
     | field rep -> focus where
@@ -236,7 +249,7 @@ instance (GHasField' field left focus, any ~ focus)
   gfieldProduct = go . gfield @field
     where go f (left :*: right) = fmap (:*: right) (f left)
 
-instance (GHasField' field right focus, any ~ focus)
+instance (GHasField' field right focus)
     => GHasFieldProduct 'Nothing field (left :*: right) focus where
   gfieldProduct = go . gfield @field
     where go f (left :*: right) = fmap (left :*:) (f right)
@@ -250,9 +263,78 @@ instance (Generic structure, GHasField' field (Partial_ structure) focus)
   field = go . gfield @field
     where go f (Partial inner) = fmap Partial (f inner)
 
----
+-- | For types /without/ named fields, our lens must be positional. This works
+-- just the same as 'field', but we type-apply the index (starting at @1@).
+--
+-- >>> :set -XDataKinds -XTypeApplications
+--
+-- prop> ((p :: Partial B) & position @2 .~ x) ^. position @2 == x
+-- prop> (p & position @2 .~ (p ^. position @2)) == (p :: Partial B)
+-- prop> ((p & position @2 .~ x) & position @2 .~ y) == ((p :: Partial B) & position @2 .~ y)
+class HasPosition' (index :: Nat) (structure :: Type) (focus :: Type)
+    | index structure -> focus where
+  position :: Lens' (Partial structure) (Maybe focus)
 
--- |
+type family Position (index :: Nat) (rep :: Type -> Type) :: Maybe Type where
+  Position 1 (K1 _ (Maybe inner)) = 'Just inner
+  Position _ (K1 _  _           ) = 'Nothing
+
+  Position count (M1 index meta inner)
+    = Position count inner
+
+  Position count (left :*: right)
+    = Position_ (Count left <=? count) count left right
+
+type family Count (rep :: Type -> Type) :: Nat where
+  Count (left :*: right) = Count left + Count right
+  Count  _               = 1
+
+type family Position_ (isLeft :: Bool) (count :: Nat) (left :: Type -> Type) (right :: Type -> Type) :: Maybe Type where
+  Position_ 'True count left _ = Position count left
+  Position_ 'False count _ right = Position count right
+
+class GHasPosition' (index :: Nat) (rep :: Type -> Type) (focus :: Type)
+    | index rep -> focus where
+  gposition :: Lens' (rep p) (Maybe focus)
+
+instance GHasPosition' count inner focus
+    => GHasPosition' count (M1 index meta inner) focus where
+  gposition = go . gposition @count
+    where go f = fmap M1 . f . unM1
+
+class GHasPositionProduct
+    (goal  ::   Maybe Type)
+    (count ::          Nat)
+    (rep   :: Type -> Type)
+    (focus ::         Type)
+    | count rep -> focus where
+  gpositionProduct :: Lens' (rep p) (Maybe focus)
+
+instance GHasPositionProduct (Position count left) count (left :*: right) focus
+    => GHasPosition' count (left :*: right) focus where
+  gposition = gpositionProduct @(Position count left) @count
+
+instance (GHasPosition' count left focus, any ~ focus)
+    => GHasPositionProduct ('Just any) count (left :*: right) focus where
+  gpositionProduct = go . gposition @count
+    where go f (left :*: right) = fmap (:*: right) (f left)
+
+instance (GHasPosition' (count - Count left) right focus)
+    => GHasPositionProduct 'Nothing count (left :*: right) focus where
+  gpositionProduct = go . gposition @(count - Count left)
+    where go f (left :*: right) = fmap (left :*:) (f right)
+
+instance any ~ focus => GHasPosition' 1 (K1 index (Maybe any)) focus where
+  gposition f = fmap K1 . f . unK1
+
+instance (Generic structure, GHasPosition' index (Partial_ structure) focus)
+    => HasPosition' index structure focus where
+  position = go . gposition @index
+    where go f (Partial inner) = fmap Partial (f inner)
+
+-- | We can construct partial equivalents of complete structures, and attempt
+-- to build complete structures from partial representations.
+--
 -- prop> fromPartial (toPartial x) == Just (x :: A)
 -- prop> fromPartial (toPartial x) == Just (x :: B)
 class HasPartial (structure :: Type) where
@@ -281,8 +363,8 @@ instance (Generic structure, GHasPartial (Rep structure))
   toPartial   = Partial .  gtoPartial  . from
   fromPartial = fmap to . gfromPartial . runPartial
 
----
-
+-- | If all the components of a structure have an 'Arbitrary' instance, we can
+-- trivially create arbitrary partial structures.
 class GArbitrary (rep :: Type -> Type) where 
   garbitrary :: Gen (rep p)
 
@@ -300,17 +382,14 @@ instance (Generic structure, GArbitrary (Partial_ structure))
     => Arbitrary (Partial structure) where
   arbitrary = fmap Partial garbitrary
 
----
-
--- |
--- >>> defaults (Triple () "Hello" True) mempty
--- Triple () "Hello" True
+-- | We can build structures from partial representations without a 'Maybe' if
+-- we can provide a structure full of defaults. When a field is missing, we
+-- just use the field in the default structure.
 --
--- >>> :set -XDataKinds
--- >>> import Control.Lens
--- >>> import Data.Function ((&))
--- >>> defaults (Person "Tom" 25 True) (mempty & field @"name" ?~ "Tobi")
--- Person {name = "Tobi", age = 25, likesDogs = True}
+-- prop> defaults x mempty == (x :: A)
+-- prop> defaults x mempty == (x :: B)
+--
+-- prop> defaults (x :: A) (mempty & field @"name" ?~ text) == x { name = text }
 class Defaults (structure :: Type) where
   defaults :: structure -> Partial structure -> structure
 
@@ -332,7 +411,9 @@ instance (Generic structure, GDefaults (Rep structure))
     => Defaults structure where
   defaults x (Partial y) = to (gdefaults (from x) y)
 
--- |
+-- | For complete partial structures, the 'Show' instances should match (though
+-- there are some edge-cases around, say, rendering of negative numbers).
+--
 -- prop> show (toPartial x) == show (x :: A)
 -- prop> show (toPartial x) == show (x :: B)
 -- 
