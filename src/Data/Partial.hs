@@ -2,8 +2,8 @@
 {-# LANGUAGE DataKinds              #-}
 {-# LANGUAGE DeriveGeneric          #-}
 {-# LANGUAGE FlexibleInstances      #-}
-{-# LANGUAGE GADTs                  #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE GADTs                  #-}
 {-# LANGUAGE PolyKinds              #-}
 {-# LANGUAGE RankNTypes             #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
@@ -11,7 +11,6 @@
 {-# LANGUAGE TypeFamilies           #-}
 {-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE UndecidableInstances   #-}
-
 module Data.Partial where
 
 import Control.Applicative ((<|>), empty)
@@ -26,10 +25,10 @@ import Test.QuickCheck.Arbitrary (Arbitrary (..))
 import Test.QuickCheck.Gen (Gen)
 
 -- $setup
--- >>> :set -XDeriveGeneric -XTypeApplications
+-- >>> :set -XDataKinds -XDeriveGeneric -XFlexibleContexts -XTypeApplications
 --
 -- >>> :{
--- data Person
+-- data A
 --   = Person
 --       { name      :: String
 --       , age       :: Int
@@ -38,11 +37,23 @@ import Test.QuickCheck.Gen (Gen)
 --   deriving (Eq, Generic, Ord, Show)
 -- :}
 --
+-- >>> :{
+-- data B = Triple () String Bool
+--   deriving (Eq, Generic, Ord, Show)
+-- :}
+--
+-- >>> import Control.Lens
+-- >>> import Data.Function ((&))
 -- >>> import Test.QuickCheck.Arbitrary
 --
 -- >>> :{
--- instance Arbitrary Person where
+-- instance Arbitrary A where
 --   arbitrary = Person <$> arbitrary <*> arbitrary <*> arbitrary
+-- :}
+--
+-- >>> :{
+-- instance Arbitrary B where
+--   arbitrary = Triple <$> arbitrary <*> arbitrary <*> arbitrary
 -- :}
 
 
@@ -62,12 +73,17 @@ newtype Partial (structure :: Type)
 ---
 
 -- |
--- >>> mempty @(Partial Person) == mempty
+-- >>> mempty @(Partial A) == mempty
 -- True
 --
--- prop> x == (x :: Person)
+-- >>> mempty @(Partial B) == mempty
+-- True
 --
--- prop> (x == y) == (toPartial x == toPartial (y :: Person))
+-- prop> x == (x :: A)
+-- prop> x == (x :: B)
+--
+-- prop> (x == y) == (toPartial x == toPartial (y :: A))
+-- prop> (x == y) == (toPartial x == toPartial (y :: B))
 class GEq (rep :: Type -> Type) where
   geq :: rep p -> rep q -> Bool
 
@@ -86,10 +102,14 @@ instance (Generic structure, GEq (Partial_ structure))
   Partial x == Partial y = geq x y
 
 -- |
--- >>> compare mempty (mempty @(Partial Person))
+-- >>> compare mempty (mempty @(Partial A))
 -- EQ
 --
--- prop> compare x y == compare (toPartial x) (toPartial (y :: Person))
+-- >>> compare mempty (mempty @(Partial B))
+-- EQ
+--
+-- prop> compare x y == compare (toPartial x) (toPartial (y :: A))
+-- prop> compare x y == compare (toPartial x) (toPartial (y :: B))
 class GEq rep => GOrd (rep :: Type -> Type) where
   gcompare :: rep p -> rep q -> Ordering
 
@@ -108,7 +128,8 @@ instance (Generic structure, GOrd (Partial_ structure))
   compare (Partial x) (Partial y) = gcompare x y
 
 -- |
--- prop> x <> (y <> z) == (x <> y) <> (z :: Partial Person)
+-- prop> x <> (y <> z) == (x <> y) <> (z :: Partial A)
+-- prop> x <> (y <> z) == (x <> y) <> (z :: Partial B)
 class GSemigroup (rep :: Type -> Type) where
   gmappend :: rep p -> rep q -> rep r
 
@@ -132,8 +153,11 @@ instance (Generic structure, GSemigroup (Partial_ structure))
     = Partial (gmappend x y)
 
 -- |
--- prop> mempty <> x == (x :: Partial Person)
--- prop> x <> mempty == (x :: Partial Person)
+-- prop> mempty <> x == (x :: Partial A)
+-- prop> mempty <> x == (x :: Partial B)
+--
+-- prop> x <> mempty == (x :: Partial A)
+-- prop> x <> mempty == (x :: Partial B)
 class GSemigroup rep => GMonoid (rep :: Type -> Type) where
   gmempty :: rep p
 
@@ -178,6 +202,11 @@ type family (x :: Maybe k) <|> (y :: Maybe k) :: Maybe k where
   'Just x <|> y = 'Just x
   _       <|> y =  y
 
+
+-- |
+-- prop> ((p :: Partial A) & field @"name" .~ x) ^. field @"name" == x
+-- prop> (p & field @"name" .~ (p ^. field @"name")) == (p :: Partial A)
+-- prop> ((p & field @"name" .~ x) & field @"name" .~ y) == ((p :: Partial A) & field @"name" .~ y)
 class HasField' (field :: Symbol) (structure :: Type) (focus :: Type)
     | field structure -> focus where
   field :: Lens' (Partial structure) (Maybe focus)
@@ -224,7 +253,8 @@ instance (Generic structure, GHasField' field (Partial_ structure) focus)
 ---
 
 -- |
--- prop> fromPartial (toPartial x) == Just (x :: Person)
+-- prop> fromPartial (toPartial x) == Just (x :: A)
+-- prop> fromPartial (toPartial x) == Just (x :: B)
 class HasPartial (structure :: Type) where
   toPartial   ::         structure -> Partial structure
   fromPartial :: Partial structure -> Maybe   structure
@@ -273,8 +303,8 @@ instance (Generic structure, GArbitrary (Partial_ structure))
 ---
 
 -- |
--- >>> defaults ((3 :: Int), "Hello", True) mempty
--- (3,"Hello",True)
+-- >>> defaults (Triple () "Hello" True) mempty
+-- Triple () "Hello" True
 --
 -- >>> :set -XDataKinds
 -- >>> import Control.Lens
@@ -302,13 +332,15 @@ instance (Generic structure, GDefaults (Rep structure))
     => Defaults structure where
   defaults x (Partial y) = to (gdefaults (from x) y)
 
----
-
 -- |
--- prop> show (toPartial x) == show (x :: Person)
+-- prop> show (toPartial x) == show (x :: A)
+-- prop> show (toPartial x) == show (x :: B)
 -- 
--- >>> mempty @(Partial Person)
+-- >>> mempty @(Partial A)
 -- Person {name = ???, age = ???, likesDogs = ???}
+--
+-- >>> mempty @(Partial B)
+-- Triple ??? ??? ???
 class GShow (named :: Bool) (rep :: Type -> Type) where
   gshow :: rep p -> String
 
@@ -338,7 +370,7 @@ instance (GShow 'True inner, KnownSymbol field)
 instance GShow 'False inner => GShow 'False (S1 meta inner) where
   gshow (M1 inner) = gshow @'False inner
 
-instance Show inner => GShow any (K1 R (Maybe inner)) where
+instance Show inner => GShow named (K1 R (Maybe inner)) where
   gshow (K1 x) = maybe "???" show x
 
 instance (Generic structure, GShow 'True (Partial_ structure))
