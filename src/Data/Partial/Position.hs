@@ -1,3 +1,5 @@
+{-# OPTIONS_HADDOCK not-home #-}
+
 {-# LANGUAGE AllowAmbiguousTypes    #-}
 {-# LANGUAGE DataKinds              #-}
 {-# LANGUAGE FlexibleInstances      #-}
@@ -8,6 +10,15 @@
 {-# LANGUAGE TypeFamilies           #-}
 {-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE UndecidableInstances   #-}
+
+{-|
+Module      : Data.Partial.Position
+Description : Manipulate partial structures using position indices.
+Copyright   : (c) Tom Harding, 2019
+License     : MIT
+Maintainer  : tom.harding@habito.com
+Stability   : experimental
+-}
 module Data.Partial.Position
   ( HasPosition' (..)
   ) where

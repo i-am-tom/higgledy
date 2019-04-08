@@ -1,3 +1,5 @@
+{-# OPTIONS_HADDOCK not-home #-}
+
 {-# LANGUAGE AllowAmbiguousTypes    #-}
 {-# LANGUAGE DataKinds              #-}
 {-# LANGUAGE FlexibleInstances      #-}
@@ -7,7 +9,21 @@
 {-# LANGUAGE TypeFamilies           #-}
 {-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE UndecidableInstances   #-}
-module Data.Partial.Types where
+
+{-|
+Module      : Data.Partial.Position
+Description : Partial structure type declarations.
+Copyright   : (c) Tom Harding, 2019
+License     : MIT
+Maintainer  : tom.harding@habito.com
+Stability   : experimental
+-}
+module Data.Partial.Types
+  ( Partial (..)
+
+  , Partial_
+  , GPartial_
+  ) where
 
 import Data.Monoid (Last (..))
 import Data.Function (on)
@@ -21,7 +37,7 @@ import Test.QuickCheck.Function (Function (..), functionMap)
 
 -- | A partial structure is a version of a structure in which every parameter
 -- is optional. We can interact with a partial structure using the API
--- provided, and eventually use the 'impartial' lens to attempt to build a
+-- provided, and eventually use the @impartial@ lens to attempt to build a
 -- complete structure from our partial data set.
 --
 -- >>> import Control.Lens
@@ -41,9 +57,11 @@ newtype Partial (structure :: Type)
 
 -------------------------------------------------------------------------------
 
+-- | Calculate the "partial representation" of a type.
 type Partial_ (structure :: Type)
   = GPartial_ (Rep structure)
 
+-- | Calculate the "partial representation" of a generic rep.
 type family GPartial_ (rep :: Type -> Type) :: Type -> Type where
 
   GPartial_ (M1 index meta inner)

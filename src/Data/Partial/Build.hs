@@ -1,9 +1,20 @@
+{-# OPTIONS_HADDOCK not-home #-}
+
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE KindSignatures       #-}
 {-# LANGUAGE MonoLocalBinds       #-}
 {-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE UndecidableInstances #-}
+
+{-|
+Module      : Data.Partial.Build
+Description : Build structures from partials (and back).
+Copyright   : (c) Tom Harding, 2019
+License     : MIT
+Maintainer  : tom.harding@habito.com
+Stability   : experimental
+-}
 module Data.Partial.Build
   ( impartial
   , HasPartial (..)

@@ -1,8 +1,19 @@
+{-# OPTIONS_HADDOCK not-home #-}
+
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE KindSignatures       #-}
 {-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE UndecidableInstances #-}
+
+{-|
+Module      : Data.Partial.Default
+Description : Create total structures using fallback defaults.
+Copyright   : (c) Tom Harding, 2019
+License     : MIT
+Maintainer  : tom.harding@habito.com
+Stability   : experimental
+-}
 module Data.Partial.Default
   ( Defaults (..)
   ) where
