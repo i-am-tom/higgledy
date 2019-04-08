@@ -16,6 +16,11 @@ extra-source-files:  CHANGELOG.md
 
 library
   exposed-modules:     Data.Partial
+                       Data.Partial.Build
+                       Data.Partial.Default
+                       Data.Partial.Field
+                       Data.Partial.Position
+                       Data.Partial.Types
   -- other-modules:
   -- other-extensions:
   build-depends:       base ^>=4.12.0.0
