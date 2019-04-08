@@ -4,23 +4,36 @@
 {-# LANGUAGE MonoLocalBinds       #-}
 {-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE UndecidableInstances #-}
-module Data.Partial.Build where
+module Data.Partial.Build
+  ( impartial
+  , HasPartial (..)
+  ) where
 
+import Control.Applicative (liftA2)
 import Control.Lens (Prism', prism')
 import Data.Kind (Type)
 import Data.Partial.Types (Partial (..), GPartial_)
 import GHC.Generics
 
--- | We can construct partial equivalents of complete structures, and attempt
--- to build complete structures from partial representations.
-impartial
-  :: ( Generic structure
-     , HasPartial structure
-     )
-  => Prism' (Partial structure) structure
-
+-- | We can construct a prism from a partial structure to its complete
+-- structure, which will "succeed" if all values in the structure have been
+-- populated.
+--
+-- >>> :set -XTypeApplications
+-- >>> import Control.Lens
+--
+-- >>> mempty ^? impartial @(Int, String)
+-- Nothing
+--
+-- >>> toPartial ("Hello", True) ^? impartial
+-- Just ("Hello",True)
+impartial :: (Generic a, HasPartial a) => Prism' (Partial a) a
 impartial = prism' toPartial fromPartial
 
+-------------------------------------------------------------------------------
+
+-- | As this is implemented with generics, an instance is implied for any type
+-- that implements 'Generic' sensibly.
 class HasPartial (structure :: Type) where
   toPartial   ::         structure -> Partial structure
   fromPartial :: Partial structure -> Maybe   structure
@@ -35,8 +48,8 @@ instance GHasPartial inner => GHasPartial (M1 index meta inner) where
 
 instance (GHasPartial left, GHasPartial right)
     => GHasPartial (left :*: right) where
-  gtoPartial   (left :*: right) = (:*:)     (gtoPartial left)     (gtoPartial right)
-  gfromPartial (left :*: right) = (:*:) <$> gfromPartial left <*> gfromPartial right
+  gtoPartial   (l :*: r) =        (:*:) (  gtoPartial l) (  gtoPartial r)
+  gfromPartial (l :*: r) = liftA2 (:*:) (gfromPartial l) (gfromPartial r)
 
 instance GHasPartial (K1 index inner) where
   gtoPartial   =      K1 . Just . unK1
