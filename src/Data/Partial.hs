@@ -137,12 +137,6 @@ instance (Generic structure, GMonoid (Partial_ structure))
 -- the partial fields. Note that we use a 'Control.Lens.Lens' to the 'Maybe'
 -- rather than a 'Control.Lens.Prism' because we want the option to "remove"
 -- partial data by setting a field to 'Nothing'.
---
--- >>> :set -XDataKinds -XTypeApplications
---
--- -- prop> ((p :: Partial A) & field @"name" .~ x) ^. field @"name" == x
--- -- prop> (p & field @"name" .~ (p ^. field @"name")) == (p :: Partial A)
--- -- prop> ((p & field @"name" .~ x) & field @"name" .~ y) == ((p :: Partial A) & field @"name" .~ y)
 class HasField' (field :: Symbol) (structure :: Type) (focus :: Type)
     | field structure -> focus where
   field :: Lens' (Partial structure) (Maybe focus)
@@ -351,8 +345,6 @@ instance (Generic structure, GToTuple (Partial_ structure) tuple)
 -- | We can build structures from partial representations without a 'Maybe' if
 -- we can provide a structure full of defaults. When a field is missing, we
 -- just use the field in the default structure.
---
--- -- prop> defaults (x :: A) (mempty & field @"name" ?~ text) == x { name = text }
 class Defaults (structure :: Type) where
   defaults :: structure -> Partial structure -> structure
 
