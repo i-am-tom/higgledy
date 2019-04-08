@@ -1,18 +1,54 @@
 {-# LANGUAGE AllowAmbiguousTypes       #-}
 {-# LANGUAGE BlockArguments            #-}
 {-# LANGUAGE ConstraintKinds           #-}
+{-# LANGUAGE DataKinds                 #-}
 {-# LANGUAGE DeriveGeneric             #-}
 {-# LANGUAGE FlexibleContexts          #-}
+{-# LANGUAGE MonoLocalBinds            #-}
+{-# LANGUAGE RankNTypes                #-}
 {-# LANGUAGE ScopedTypeVariables       #-}
 {-# LANGUAGE TypeApplications          #-}
 module Main where
 
+import Control.Lens (Lens', (.~), (^.))
+import Data.Function ((&))
 import Data.Partial
 import GHC.Generics
 import Test.DocTest
 import Test.Hspec
-import Test.QuickCheck.Arbitrary
 import Test.QuickCheck
+import Test.QuickCheck.Arbitrary
+
+main :: IO ()
+main = do
+  doctest ["src", "test"]
+
+  hspec do
+    describe "Unnamed" do
+      eq         @(Partial Triple)
+      ord        @(Partial Triple)
+      semigroup  @(Partial Triple)
+      idempotent @(Partial Triple)
+      monoid     @(Partial Triple)
+
+      partials @Triple
+      lens @(Partial Triple) (position @1)
+      lens @(Partial Triple) (position @2)
+      lens @(Partial Triple) (position @3)
+
+    describe "Named" do
+      eq         @(Partial Person)
+      ord        @(Partial Person)
+      semigroup  @(Partial Person)
+      idempotent @(Partial Person)
+      monoid     @(Partial Person)
+
+      partials @Person
+      lens @(Partial Person) (field @"name")
+      lens @(Partial Person) (field @"age")
+      lens @(Partial Person) (field @"likesDogs")
+
+-------------------------------------------------------------------------------
 
 data Person
   = Person
@@ -31,6 +67,8 @@ instance Arbitrary Person where
 
 instance Arbitrary Triple where
   arbitrary = Triple <$> arbitrary <*> arbitrary <*> arbitrary
+
+-------------------------------------------------------------------------------
 
 eq :: forall a. (Arbitrary a, CoArbitrary a, Eq a, Function a, Show a) => SpecWith ()
 eq = describe "Eq" do
@@ -72,43 +110,52 @@ monoid = describe "Monoid" do
   it "has left identity"  $ property \(x :: a) -> mempty <> x == x
   it "has right identity" $ property \(x :: a) -> x <> mempty == x
 
-main :: IO ()
-main = do
-  doctest ["src", "test"]
+partials
+  :: forall a
+   . ( Arbitrary a, Arbitrary (Partial a)
+     , Eq        a, Eq        (Partial a)
+     , Show      a, Show      (Partial a)
 
-  hspec do
-    describe "Unnamed" do
-      eq         @(Partial Triple)
-      ord        @(Partial Triple)
-      semigroup  @(Partial Triple)
-      idempotent @(Partial Triple)
-      monoid     @(Partial Triple)
+     , Defaults a
+     , Generic a
+     , HasPartial a
+     , Monoid (Partial a)
+     )
+  => SpecWith ()
 
-    describe "Named" do
-      eq         @(Partial Person)
-      ord        @(Partial Person)
-      semigroup  @(Partial Person)
-      idempotent @(Partial Person)
-      monoid     @(Partial Person)
+partials = describe "Partial" do
+  describe "Eq" do
+    it "is monotonic with respect to ordering"
+      $ property \(x :: Person) y ->
+          (x <= y) == (toPartial x <= toPartial y)
 
-    it "is monotonic with respect to ordering" $ property \(x :: Person) y ->
-      (x <= y) == (toPartial x <= toPartial y)
+  describe "toPartial / fromPartial" do
+    it "round-trips" $ property \(x :: a) ->
+      fromPartial (toPartial x) == Just x
 
-    describe "Show" do
-      it "mimics the total structure's 'Show' instance"
-        $ property \(x :: Person) -> show (toPartial x) == show x
+  describe "defaults" do
+    it "populates from defaults" $ property \(x :: a) ->
+      defaults x mempty == x
 
-      it "prints (unnamed) empty fields as ???" do
-        show (mempty :: Partial Triple) `shouldBe`
-          "Triple ??? ??? ???"
+    it "overwrites with partials" $ property \(x :: a) (y :: Partial a) ->
+      toPartial (defaults x y) == toPartial x <> y
 
-      it "prints (named) empty fields as ???" do
-        show (mempty @(Partial Person)) `shouldBe`
-          "Person {name = ???, age = ???, likesDogs = ???}"
+lens
+  :: forall s a
+   . ( Arbitrary s, Arbitrary a
+     , Show      s, Show      a
+     , Eq        a, Eq        s
+     )
+  => Lens' s a
+  -> SpecWith ()
 
-    describe "toPartial / fromPartial" do
-      it "round-trips (named)" $ property \(x :: Person) ->
-        fromPartial (toPartial x) == Just x
+lens l = describe "Lens laws" do
+  it "- get l . set l x == x" $ property \(s :: s) (a :: a) ->
+    (s & l .~ a) ^. l == a
 
-      it "round-trips (unnamed)" $ property \(x :: Triple) ->
-        fromPartial (toPartial x) == Just x
+  it "- set l (get l s) == s" $ property \(s :: s) ->
+    (s & l .~ (s ^. l)) == s
+
+  it "- set l b . set l a == set l b" $ property \(s :: s) (a :: a) (b :: a) ->
+    (s & l .~ a & l .~ b) == (s & l .~ b)
+

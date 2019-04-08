@@ -29,6 +29,7 @@ test-suite test
                      , doctest
                      , higgledy
                      , hspec
+                     , lens
                      , QuickCheck
   main-is:             Main.hs
   type:                exitcode-stdio-1.0

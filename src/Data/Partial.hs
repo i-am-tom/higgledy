@@ -200,12 +200,6 @@ instance (Generic structure, GHasField' field (Partial_ structure) focus)
 
 -- | For types /without/ named fields, our lens must be positional. This works
 -- just the same as 'field', but we type-apply the index (starting at @1@).
---
--- >>> :set -XDataKinds -XTypeApplications
---
--- -- prop> ((p :: Partial B) & position @2 .~ x) ^. position @2 == x
--- -- prop> (p & position @2 .~ (p ^. position @2)) == (p :: Partial B)
--- -- prop> ((p & position @2 .~ x) & position @2 .~ y) == ((p :: Partial B) & position @2 .~ y)
 class HasPosition' (index :: Nat) (structure :: Type) (focus :: Type)
     | index structure -> focus where
   position :: Lens' (Partial structure) (Maybe focus)
@@ -287,7 +281,7 @@ instance (GHasPartial left, GHasPartial right)
   gfromPartial (left :*: right) = (:*:) <$> gfromPartial left <*> gfromPartial right
 
 instance GHasPartial (K1 index inner) where
-  gtoPartial   =      K1 . Just . unK1  
+  gtoPartial   =      K1 . Just . unK1
   gfromPartial = fmap K1 .        unK1
 
 instance (Generic structure, GHasPartial (Rep structure))
@@ -297,7 +291,7 @@ instance (Generic structure, GHasPartial (Rep structure))
 
 -- | If all the components of a structure have an 'Arbitrary' instance, we can
 -- trivially create arbitrary partial structures.
-class GArbitrary (rep :: Type -> Type) where 
+class GArbitrary (rep :: Type -> Type) where
   garbitrary :: Gen (rep p)
 
 instance GArbitrary inner => GArbitrary (M1 index meta inner) where
@@ -358,9 +352,6 @@ instance (Generic structure, GToTuple (Partial_ structure) tuple)
 -- we can provide a structure full of defaults. When a field is missing, we
 -- just use the field in the default structure.
 --
--- -- prop> defaults x mempty == (x :: A)
--- -- prop> defaults x mempty == (x :: B)
---
 -- -- prop> defaults (x :: A) (mempty & field @"name" ?~ text) == x { name = text }
 class Defaults (structure :: Type) where
   defaults :: structure -> Partial structure -> structure
@@ -385,15 +376,6 @@ instance (Generic structure, GDefaults (Rep structure))
 
 -- | For complete partial structures, the 'Show' instances should match (though
 -- there are some edge-cases around, say, rendering of negative numbers).
---
--- -- prop> show (toPartial x) == show (x :: A)
--- -- prop> show (toPartial x) == show (x :: B)
--- 
--- -- >>> mempty @(Partial A)
--- -- Person {name = ???, age = ???, likesDogs = ???}
---
--- -- >>> mempty @(Partial B)
--- -- Triple ??? ??? ???
 class GShow (named :: Bool) (rep :: Type -> Type) where
   gshow :: rep p -> String
 
