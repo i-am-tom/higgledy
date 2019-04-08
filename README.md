@@ -35,20 +35,61 @@ shortcomings:
 
 1. Some of my instances are now harder to derive, as they require some sort of
    quantified constraint in order to interact properly with the `f` parameter
-   (e.g. I now need to know that any `Show`-friendly type is /still/
+   (e.g. I now need to know that any `Show`-friendly type is _still_
    `Show`-friendly when wrapped in `f`).
 
 2. My abstraction is leaking: my pristine domain types now contain this `f`
    parameter, which doesn't really belong here.
 
 Of course, these are two rather minor points, and we can definitely live with
-them, but let's imagine we /couldn't/...
+them, but let's imagine we _couldn't_...
 
 What if the type of a partial `User` were... `Partial User`?
 
 ## The `Partial` constructor
 
-## Building
-## Manipulation by field
-## Manipulation by position
-## Defaults
+```haskell
+data User
+  = User
+      { _name      :: String
+      , _age       :: Int
+      , _likesDogs :: Bool
+      }
+  deriving (Eq, Generic, Show)
+
+examples :: [Partial User]
+examples
+  = [ -- A new partial structure with everything blank. When printed, these
+      -- fields will be represented with "???" as a placeholder.
+      mempty
+
+      -- A new partial structure with everything completed from our total
+      -- structure.
+    , toPartial (User "Tom" 25 True)
+    , User "Tom" 25 True ^. re impartial
+
+      -- A partial structure with a name, but nothing else.
+    , mempty & field @"_name" ?~      "Tom"
+    , mempty & field @"_name" .~ Just "Tim"
+
+      -- A partial structure with just an age.
+    , mempty & position @2 ?~ 24
+
+      -- A manually-filled partial structure. Both @field@ and @position@
+      -- produce lenses, so they'll work with your favourite ascii art
+      -- operators.
+    , mempty
+        & (field @"_name"      ?~ "Tom")
+        . (field @"_age"       ?~   25 )
+        . (field @"_likesDogs" ?~  True)
+    ]
+
+reconstructed :: [Maybe User]
+reconstructed
+  = [ -- We can attempt to turn a partial structure into a total structure if
+      -- we think we have populated all the fields.
+      fromPartial (toPartial (User "Tom" 25 True))
+    , mempty ^? impartial
+
+    ] <> fmap fromPartial examples
+```
