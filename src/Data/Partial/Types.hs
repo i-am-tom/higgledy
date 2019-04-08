@@ -19,10 +19,27 @@ import GHC.TypeLits (KnownSymbol, symbolVal)
 import Test.QuickCheck.Arbitrary (Arbitrary (..), CoArbitrary (..))
 import Test.QuickCheck.Function (Function (..), functionMap)
 
+-- | A partial structure is a version of a structure in which every parameter
+-- is optional. We can interact with a partial structure using the API
+-- provided, and eventually use the 'impartial' lens to attempt to build a
+-- complete structure from our partial data set.
+--
+-- >>> import Control.Lens
+-- >>> import Data.Partial.Build
+--
+-- We can attempt a construction and fail:
+--
+-- >>> mempty @(Partial (Int, String, Bool)) ^? impartial
+-- Nothing
+--
+-- ... or succeed!
+--
+-- >>> toPartial ("Hello", True) ^? impartial
+-- Just ("Hello",True)
 newtype Partial (structure :: Type)
-  = Partial
-      { runPartial :: Partial_ structure Void
-      }
+  = Partial { runPartial :: Partial_ structure Void }
+
+-------------------------------------------------------------------------------
 
 type Partial_ (structure :: Type)
   = GPartial_ (Rep structure)
@@ -66,8 +83,15 @@ instance (CoArbitrary tuple, GToTuple (Partial_ structure) tuple)
     => CoArbitrary (Partial structure) where
   coarbitrary (Partial x) = coarbitrary (gtoTuple x)
 
--- | For complete partial structures, the 'Show' instances should match (though
--- there are some edge-cases around, say, rendering of negative numbers).
+-- | We can 'show' a partial structure, and simply replace its missing fields
+-- with "???".
+--
+-- >>> mempty @(Partial (Int, String, Bool))
+-- (,,) ??? ??? ???
+--
+-- >>> import Data.Partial.Build
+-- >>> toPartial ("Hello", True)
+-- (,) "Hello" True
 class GShow (named :: Bool) (rep :: Type -> Type) where
   gshow :: rep p -> String
 
