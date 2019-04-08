@@ -8,11 +8,14 @@
 {-# LANGUAGE TypeFamilies           #-}
 {-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE UndecidableInstances   #-}
-module Data.Partial.Field where
+module Data.Partial.Field
+  ( HasField' (..)
+  ) where
 
 import Control.Lens (Lens', dimap)
-import Data.Partial.Types (Partial (..), Partial_)
 import Data.Kind (Type)
+import Data.Monoid (Last (..))
+import Data.Partial.Types (Partial (..), Partial_)
 import GHC.Generics
 import GHC.TypeLits (ErrorMessage (..), Symbol, TypeError)
 
@@ -45,8 +48,8 @@ class HasField' (field :: Symbol) (structure :: Type) (focus :: Type)
 -------------------------------------------------------------------------------
 
 type family Field (field :: Symbol) (rep :: Type -> Type) :: Maybe Type where
-  Field s (S1 (_ ('Just s) _ _ _) (_ (Maybe x))) = 'Just x
-  Field s (M1  _                   _         xs) = Field s xs
+  Field s (S1 (_ ('Just s) _ _ _) (_ (Last x))) = 'Just x
+  Field s (M1  _                   _        xs) = Field s xs
 
   Field s (l :*: r) =  Field s l <|> Field s r
   Field _  _        = 'Nothing
@@ -63,8 +66,8 @@ instance GHasField' field inner focus
     => GHasField' field (M1 index meta inner) focus where
   gfield = dimap unM1 (fmap M1) . gfield @field
 
-instance GHasField' field (K1 index (Maybe focus)) focus where
-  gfield = dimap unK1 (fmap K1)
+instance GHasField' field (K1 index (Last focus)) focus where
+  gfield = dimap (getLast . unK1) (fmap (K1 . Last))
 
 instance GHasFieldProduct (Field field left) field (left :*: right) focus
     => GHasField' field (left :*: right) focus where

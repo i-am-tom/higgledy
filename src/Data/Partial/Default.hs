@@ -9,6 +9,7 @@ module Data.Partial.Default
 
 import Data.Kind (Type)
 import Data.Maybe (fromMaybe)
+import Data.Monoid (Last (..))
 import Data.Partial.Types (Partial (..), GPartial_)
 import GHC.Generics
 
@@ -50,7 +51,7 @@ instance (GDefaults left, GDefaults right)
 
 instance GDefaults (K1 index inner) where
   gdefaults (K1 inner) (K1 partial)
-    = K1 (fromMaybe inner partial)
+    = K1 (fromMaybe inner (getLast partial))
 
 instance (Generic structure, GDefaults (Rep structure))
     => Defaults structure where

@@ -12,6 +12,7 @@ module Data.Partial.Build
 import Control.Applicative (liftA2)
 import Control.Lens (Prism', prism')
 import Data.Kind (Type)
+import Data.Monoid (Last (..))
 import Data.Partial.Types (Partial (..), GPartial_)
 import GHC.Generics
 
@@ -52,8 +53,8 @@ instance (GHasPartial left, GHasPartial right)
   gfromPartial (l :*: r) = liftA2 (:*:) (gfromPartial l) (gfromPartial r)
 
 instance GHasPartial (K1 index inner) where
-  gtoPartial   =      K1 . Just . unK1
-  gfromPartial = fmap K1 .        unK1
+  gtoPartial   =      K1 . pure    . unK1
+  gfromPartial = fmap K1 . getLast . unK1
 
 instance (Generic structure, GHasPartial (Rep structure))
     => HasPartial structure where
