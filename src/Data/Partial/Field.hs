@@ -26,9 +26,11 @@ module Data.Partial.Field
 import Control.Lens (Lens', dimap)
 import Data.Kind (Type)
 import Data.Monoid (Last (..))
+import Data.Void (Void)
 import Data.Partial.Types (Partial (..), Partial_)
 import GHC.Generics
 import GHC.TypeLits (ErrorMessage (..), Symbol, TypeError)
+import qualified Data.GenericLens.Internal as G
 
 -- | A la @generic-lens@, we are able to focus on a particular field within our
 -- partial structure. We use a lens to a 'Maybe' rather than a prism to allow
@@ -56,71 +58,16 @@ class HasField' (field :: Symbol) (structure :: Type) (focus :: Type)
     | field structure -> focus where
   field :: Lens' (Partial structure) (Maybe focus)
 
--------------------------------------------------------------------------------
+data FieldPredicate :: Symbol -> G.TyFun (Type -> Type) (Maybe Type)
+type instance G.Eval (FieldPredicate sym) tt = G.HasTotalFieldP sym tt
 
-type family Field (field :: Symbol) (rep :: Type -> Type) :: Maybe Type where
-  Field s (S1 (_ ('Just s) _ _ _) (_ (Last x))) = 'Just x
-  Field s (M1  _                   _        xs) = Field s xs
+instance G.GLens' (FieldPredicate field) (Partial_ structure) (Maybe focus)
+    => HasField' field structure focus where
+  field = go . into
+    where
+      go :: Lens' (Partial structure) (Partial_ structure Void)
+      go f = fmap Partial . f . runPartial
 
-  Field s (l :*: r) =  Field s l <|> Field s r
-  Field _  _        = 'Nothing
-
-type family (x :: Maybe k) <|> (y :: Maybe k) :: Maybe k where
-  'Just x <|> y = 'Just x
-  _       <|> y =  y
-
-class GHasField' (field :: Symbol) (rep :: Type -> Type) (focus :: Type)
-    | field rep -> focus where
-  gfield :: Lens' (rep p) (Maybe focus)
-
-instance GHasField' field inner focus
-    => GHasField' field (M1 index meta inner) focus where
-  gfield = dimap unM1 (fmap M1) . gfield @field
-
-instance GHasField' field (K1 index (Last focus)) focus where
-  gfield = dimap (getLast . unK1) (fmap (K1 . Last))
-
-instance GHasFieldProduct (Field field left) field (left :*: right) focus
-    => GHasField' field (left :*: right) focus where
-  gfield = gfieldProduct @(Field field left) @field
-
-class GHasFieldProduct
-    (goal  ::   Maybe Type)
-    (field ::       Symbol)
-    (rep   :: Type -> Type)
-    (focus ::         Type)
-    | field rep -> focus where
-  gfieldProduct :: Lens' (rep p) (Maybe focus)
-
-instance (GHasField' field left focus, any ~ focus)
-    => GHasFieldProduct ('Just any) field (left :*: right) focus where
-  gfieldProduct = go . gfield @field
-    where go f (left :*: right) = fmap (:*: right) (f left)
-
-instance (GHasField' field right focus)
-    => GHasFieldProduct 'Nothing field (left :*: right) focus where
-  gfieldProduct = go . gfield @field
-    where go f (left :*: right) = fmap (left :*:) (f right)
-
-type HasField_ (field :: Symbol) (structure :: Type)
-  = AssertHasField field structure (Field field (Partial_ structure))
-
-type family AssertHasField
-    (field     ::     Symbol)
-    (structure ::       Type)
-    (goal      :: Maybe Type) where
-  AssertHasField _     _        ('Just xs) = xs
-  AssertHasField field structure 'Nothing  = TypeError
-    ( 'ShowType structure
-        ':<>: 'Text " has no field called \""
-        ':<>: 'Text field
-        ':<>: 'Text "\"!"
-    )
-
-instance
-    ( Generic structure
-    , GHasField' field (Partial_ structure) focus
-    , HasField_ field structure ~ focus
-    ) => HasField' field structure focus where
-  field = dimap runPartial (fmap Partial) . gfield @field
+      into :: Lens' (Partial_ structure Void) (Maybe focus)
+      into = G.glens @(FieldPredicate field)
 
