@@ -79,6 +79,8 @@ type family GPartial_ (rep :: Type -> Type) :: Type -> Type where
   GPartial_ U1 = U1
   GPartial_ V1 = V1
 
+-------------------------------------------------------------------------------
+
 instance (Eq tuple, Generic xs, Tuple xs tuple) => Eq (Partial xs) where
   (==) = (==) `on` toTuple
 
@@ -93,6 +95,8 @@ instance (Monoid tuple, Generic xs, Tuple xs tuple)
     => Monoid (Partial xs) where
   mempty = fromTuple mempty
 
+-------------------------------------------------------------------------------
+
 instance (Arbitrary tuple, GToTuple (Partial_ structure) tuple)
     => Arbitrary (Partial structure) where
   arbitrary = fmap (Partial . gfromTuple) arbitrary
@@ -100,6 +104,10 @@ instance (Arbitrary tuple, GToTuple (Partial_ structure) tuple)
 instance (CoArbitrary tuple, GToTuple (Partial_ structure) tuple)
     => CoArbitrary (Partial structure) where
   coarbitrary (Partial x) = coarbitrary (gtoTuple x)
+
+instance (Generic structure, Function tuple, Tuple structure tuple)
+    => Function (Partial structure) where
+  function = functionMap toTuple fromTuple
 
 -- | We can 'show' a partial structure, and simply replace its missing fields
 -- with "???".
@@ -146,6 +154,13 @@ instance (Generic structure, GShow 'True (Partial_ structure))
     => Show (Partial structure) where
   show (Partial x) = gshow @'True x
 
+-------------------------------------------------------------------------------
+
+class Tuple (structure :: Type) (tuple :: Type)
+    | structure -> tuple where
+  toTuple   :: Partial structure -> tuple
+  fromTuple :: tuple -> Partial structure
+
 class Function tuple => GToTuple (rep :: Type -> Type) (tuple :: Type)
     | rep -> tuple where
   gfromTuple :: tuple -> rep p
@@ -165,16 +180,7 @@ instance Function inner => GToTuple (K1 index inner) inner where
   gfromTuple = K1
   gtoTuple = unK1
 
-class Tuple (structure :: Type) (tuple :: Type)
-    | structure -> tuple where
-  toTuple   :: Partial structure -> tuple 
-  fromTuple :: tuple -> Partial structure
-
 instance (Generic structure, GToTuple (Partial_ structure) tuple)
     => Tuple structure tuple where
   toTuple = gtoTuple . runPartial
   fromTuple = Partial . gfromTuple
-
-instance (Generic structure, Function tuple, Tuple structure tuple)
-    => Function (Partial structure) where
-  function = functionMap toTuple fromTuple

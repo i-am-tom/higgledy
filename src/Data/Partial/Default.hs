@@ -35,16 +35,16 @@ import GHC.Generics
 -- If we have an empty partial object, it will be entirely populated by the
 -- defaults:
 --
--- >>> defaults ("Tom", True) mempty
+-- >>> withDefaults ("Tom", True) mempty
 -- ("Tom",True)
 --
 -- As we add data to our partial structure, these are prioritised over the
 -- defaults:
 --
--- >>> defaults ("Tom", True) (mempty & position @1 ?~ "Haskell")
+-- >>> withDefaults ("Tom", True) (mempty & position @1 ?~ "Haskell")
 -- ("Haskell",True)
 class Defaults (structure :: Type) where
-  defaults :: structure -> Partial structure -> structure
+  withDefaults :: structure -> Partial structure -> structure
 
 class GDefaults (rep :: Type -> Type) where
   gdefaults :: rep p -> GPartial_ rep q -> rep r
@@ -66,5 +66,5 @@ instance GDefaults (K1 index inner) where
 
 instance (Generic structure, GDefaults (Rep structure))
     => Defaults structure where
-  defaults x (Partial y)
+  withDefaults x (Partial y)
     = to (gdefaults (from x) y)
