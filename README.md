@@ -109,22 +109,36 @@ eg13 = mempty & (position @1 ?~    3)
 -- Triple 3 ??? True
 ```
 
+## Checking whether fields are populated
+
+```haskell
+eg14 :: Maybe String
+eg14 = eg11 ^. field @"name"
+-- Just "Evil Tom"
+```
+
+```haskell
+eg15 :: Maybe String
+eg15 = eg12 ^. position @2
+-- Just "Hello!"
+```
+
 ## Populating all the fields
 
 ```haskell
 user :: User
 user = User "Good Tom" 25 True
 
-eg14 :: Partial User
-eg14 = toPartial user
--- User {name = "Good Tom", age = 25, likesDogs = True}
-
-eg15 :: Partial User
-eg15 = user ^. re impartial
--- User {name = "Good Tom", age = 25, likesDogs = True}
-
 eg16 :: Partial User
-eg16 = eg11 & field @"age" ?~ 24
+eg16 = toPartial user
+-- User {name = "Good Tom", age = 25, likesDogs = True}
+
+eg17 :: Partial User
+eg17 = user ^. re impartial
+-- User {name = "Good Tom", age = 25, likesDogs = True}
+
+eg18 :: Partial User
+eg18 = eg11 & field @"age" ?~ 24
 -- User {name = "Evil Tom", age = 24, likesDogs = False}
 ```
 
@@ -132,45 +146,45 @@ eg16 = eg11 & field @"age" ?~ 24
 triple :: Triple
 triple = Triple 123 "ABC" True
 
-eg17 :: Partial Triple
-eg17 = toPartial triple
--- Triple 123 "ABC" True
-
-eg18 :: Partial Triple
-eg18 = triple ^. re impartial
--- Triple 123 "ABC" True
-
 eg19 :: Partial Triple
-eg19 = eg13 & position @2 ?~ "XYZ"
+eg19 = toPartial triple
+-- Triple 123 "ABC" True
+
+eg20 :: Partial Triple
+eg20 = triple ^. re impartial
+-- Triple 123 "ABC" True
+
+eg21 :: Partial Triple
+eg21 = eg13 & position @2 ?~ "XYZ"
 -- Triple 3 "XYZ" True
 ```
 
 ## Extracting from partials
 
 ```haskell
-eg20 :: User
-eg20 = withDefaults user (mempty & field @"name" ?~ "Tim")
+eg22 :: User
+eg22 = withDefaults user (mempty & field @"name" ?~ "Tim")
 -- User {name = "Tim", age = 25, likesDogs = True}
 
-eg21 :: Maybe User
-eg21 = fromPartial eg14
+eg23 :: Maybe User
+eg23 = fromPartial eg14
 -- Just (User {name = "Good Tom", age = 25, likesDogs = True})
 
-eg22 :: Maybe User
-eg22 = eg15 ^? impartial
+eg24 :: Maybe User
+eg24 = eg15 ^? impartial
 -- Just (User {name = "Good Tom", age = 25, likesDogs = True})
 ```
 
 ```haskell
-eg23 :: Triple
-eg23 = withDefaults triple (mempty & position @1 ?~ 789)
+eg25 :: Triple
+eg25 = withDefaults triple (mempty & position @1 ?~ 789)
 -- Triple 789 "ABC" True
 
-eg24 :: Maybe Triple
-eg24 = fromPartial eg17
+eg26 :: Maybe Triple
+eg26 = fromPartial eg17
 -- Just (Triple 123 "ABC" True)
 
-eg25 :: Maybe Triple
-eg25 = eg18 ^? impartial
+eg27 :: Maybe Triple
+eg27 = eg18 ^? impartial
 -- Just (Triple 123 "ABC" True)
 ```

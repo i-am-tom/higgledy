@@ -133,12 +133,12 @@ partials = describe "Partial" do
     it "round-trips" $ property \(x :: a) ->
       fromPartial (toPartial x) == Just x
 
-  describe "defaults" do
+  describe "withDefaults" do
     it "populates from defaults" $ property \(x :: a) ->
-      defaults x mempty == x
+      withDefaults x mempty == x
 
     it "overwrites with partials" $ property \(x :: a) (y :: Partial a) ->
-      toPartial (defaults x y) == toPartial x <> y
+      toPartial (withDefaults x y) == toPartial x <> y
 
 lens
   :: forall s a
@@ -158,4 +158,3 @@ lens l = describe "Lens laws" do
 
   it "- set l b . set l a == set l b" $ property \(s :: s) (a :: a) (b :: a) ->
     (s & l .~ a & l .~ b) == (s & l .~ b)
-
