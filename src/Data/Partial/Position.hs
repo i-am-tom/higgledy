@@ -27,6 +27,7 @@ import Control.Lens (Lens', dimap)
 import Data.Kind (Type)
 import Data.Monoid (Last (..))
 import Data.Partial.Types (Partial (..), Partial_)
+import Data.Void (Void)
 import GHC.Generics
 import GHC.TypeLits (ErrorMessage (..), Nat, TypeError, type (<=?), type (+), type (-))
 import qualified Data.GenericLens.Internal as G
@@ -52,13 +53,15 @@ import qualified Data.Generics.Internal.VL.Lens as G
 -- ...
 class HasPosition' (index :: Nat) (structure :: Type) (focus :: Type)
     | index structure -> focus where
-  position :: Lens' (Partial structure) (Last focus)
+  position :: Lens' (Partial structure) (Maybe focus)
 
 data PositionPredicate :: Nat -> G.TyFun (Type -> Type) (Maybe Type)
 type instance G.Eval (PositionPredicate sym) tt = G.HasTotalPositionP sym tt
 
 instance G.GLens' (PositionPredicate index) (Partial_ structure) (Last focus)
     => HasPosition' index structure focus where
-  position = go . G.ravel (G.glens @(PositionPredicate index))
-    where go f = fmap Partial . f . runPartial
-
+  position
+    = G.ravel
+    $ dimap runPartial Partial
+    . G.glens @(PositionPredicate index)
+    . dimap getLast Last

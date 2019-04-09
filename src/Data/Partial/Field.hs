@@ -57,13 +57,15 @@ import qualified Data.GenericLens.Internal as G
 -- ...
 class HasField' (field :: Symbol) (structure :: Type) (focus :: Type)
     | field structure -> focus where
-  field :: Lens' (Partial structure) (Last focus)
+  field :: Lens' (Partial structure) (Maybe focus)
 
 data FieldPredicate :: Symbol -> G.TyFun (Type -> Type) (Maybe Type)
 type instance G.Eval (FieldPredicate sym) tt = G.HasTotalFieldP sym tt
 
 instance G.GLens' (FieldPredicate field) (Partial_ structure) (Last focus)
     => HasField' field structure focus where
-  field = go . G.ravel (G.glens @(FieldPredicate field))
-    where go f = fmap Partial . f . runPartial
-
+  field
+    = G.ravel
+    $ dimap runPartial Partial
+    . G.glens @(FieldPredicate field)
+    . dimap getLast Last
