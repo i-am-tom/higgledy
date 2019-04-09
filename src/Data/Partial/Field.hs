@@ -30,6 +30,7 @@ import Data.Void (Void)
 import Data.Partial.Types (Partial (..), Partial_)
 import GHC.Generics
 import GHC.TypeLits (ErrorMessage (..), Symbol, TypeError)
+import qualified Data.Generics.Internal.VL.Lens as G
 import qualified Data.GenericLens.Internal as G
 
 -- | A la @generic-lens@, we are able to focus on a particular field within our
@@ -56,18 +57,13 @@ import qualified Data.GenericLens.Internal as G
 -- ...
 class HasField' (field :: Symbol) (structure :: Type) (focus :: Type)
     | field structure -> focus where
-  field :: Lens' (Partial structure) (Maybe focus)
+  field :: Lens' (Partial structure) (Last focus)
 
 data FieldPredicate :: Symbol -> G.TyFun (Type -> Type) (Maybe Type)
 type instance G.Eval (FieldPredicate sym) tt = G.HasTotalFieldP sym tt
 
-instance G.GLens' (FieldPredicate field) (Partial_ structure) (Maybe focus)
+instance G.GLens' (FieldPredicate field) (Partial_ structure) (Last focus)
     => HasField' field structure focus where
-  field = go . into
-    where
-      go :: Lens' (Partial structure) (Partial_ structure Void)
-      go f = fmap Partial . f . runPartial
-
-      into :: Lens' (Partial_ structure Void) (Maybe focus)
-      into = G.glens @(FieldPredicate field)
+  field = go . G.ravel (G.glens @(FieldPredicate field))
+    where go f = fmap Partial . f . runPartial
 
