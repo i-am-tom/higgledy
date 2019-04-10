@@ -11,21 +11,20 @@
 {-# LANGUAGE UndecidableInstances   #-}
 
 {-|
-Module      : Data.Partial.Position
-Description : Partial structure type declarations.
+Module      : Data.Generic.HKD.Types
+Description : Type declarations for the HKD structure.
 Copyright   : (c) Tom Harding, 2019
 License     : MIT
 Maintainer  : tom.harding@habito.com
 Stability   : experimental
 -}
-module Data.Partial.Types
-  ( Partial (..)
+module Data.Generic.HKD.Types
+  ( HKD (..)
 
-  , Partial_
-  , GPartial_
+  , HKD_
+  , GHKD_
   ) where
 
-import Data.Monoid (Last (..))
 import Data.Function (on)
 import Data.Kind (Type)
 import Data.Proxy (Proxy (..))
@@ -35,89 +34,94 @@ import GHC.TypeLits (KnownSymbol, symbolVal)
 import Test.QuickCheck.Arbitrary (Arbitrary (..), CoArbitrary (..))
 import Test.QuickCheck.Function (Function (..), functionMap)
 
--- | A partial structure is a version of a structure in which every parameter
--- is optional. We can interact with a partial structure using the API
--- provided, and eventually use the @impartial@ lens to attempt to build a
--- complete structure from our partial data set.
+-- | Higher-kinded data (HKD) is the design pattern in which every field in our
+-- type is wrapped in some functor @f@:
 --
--- >>> import Control.Lens
--- >>> import Data.Partial.Build
+-- @
+--   data User f
+--    = User
+--        { name      :: f String
+--        , age       :: f Int
+--        }
+-- @
 --
--- We can attempt a construction and fail:
+-- Depending on the functor, we can get different behaviours: with 'Maybe', we
+-- get a partial structure; with 'Validation', we get a piecemeal validator;
+-- and so on. The @HKD@ newtype allows us to lift any type into an HKD-style
+-- API via its generic representation.
 --
--- >>> mempty @(Partial (Int, String, Bool)) ^? impartial
--- Nothing
+-- >>> :set -XDeriveGeneric -XTypeApplications
+-- >>> :{
+-- data User
+--   = User { name :: String, age :: Int }
+--   deriving Generic
+-- :}
 --
--- ... or succeed!
+-- The @HKD@ type is indexed by our choice of functor and the structure we're
+-- lifting. In other words, we can define a synonym for our behaviour:
 --
--- >>> toPartial ("Hello", True) ^? impartial
--- Just ("Hello",True)
-newtype Partial (structure :: Type)
-  = Partial { runPartial :: Partial_ structure Void }
+-- >>> import Data.Monoid (Last (..))
+-- >>> type Partial = HKD Last
+--
+-- ... and then we're ready to go!
+--
+-- >>> mempty @(Partial User)
+-- User {name = Last {getLast = Nothing}, age = Last {getLast = Nothing}}
+--
+-- >>> mempty @(HKD [] (Int, Bool))
+-- (,) [] []
+newtype HKD (f :: Type -> Type) (structure :: Type)
+  = HKD { runHKD :: HKD_ f structure Void }
 
 -------------------------------------------------------------------------------
 
 -- | Calculate the "partial representation" of a type.
-type Partial_ (structure :: Type)
-  = GPartial_ (Rep structure)
+type HKD_ (f :: Type -> Type) (structure :: Type)
+  = GHKD_ f (Rep structure)
 
 -- | Calculate the "partial representation" of a generic rep.
-type family GPartial_ (rep :: Type -> Type) :: Type -> Type where
-
-  GPartial_ (M1 index meta inner)
-    = M1 index meta (GPartial_ inner)
-
-  GPartial_ (left :*: right)
-    = GPartial_ left :*: GPartial_ right
-
-  GPartial_ (K1 index value)
-    = K1 index (Last value)
-
-  GPartial_ (left :+: right)
-    = GPartial_ left :+: GPartial_ right
-
-  GPartial_ U1 = U1
-  GPartial_ V1 = V1
+type family GHKD_ (f :: Type -> Type) (rep :: Type -> Type) :: Type -> Type where
+  GHKD_ f (M1 index meta inner) = M1 index meta (GHKD_ f inner)
+  GHKD_ f (left :*: right)      = GHKD_ f left :*: GHKD_ f right
+  GHKD_ f (K1 index value)      = K1 index (f value)
+  GHKD_ f (left :+: right)      = GHKD_ f left :+: GHKD_ f right
+  GHKD_ f  U1                   = U1
+  GHKD_ f  V1                   = V1
 
 -------------------------------------------------------------------------------
 
-instance (Eq tuple, Generic xs, Tuple xs tuple) => Eq (Partial xs) where
+instance (Eq tuple, Generic xs, Tuple f xs tuple)
+    => Eq (HKD f xs) where
   (==) = (==) `on` toTuple
 
-instance (Ord tuple, Generic xs, Tuple xs tuple) => Ord (Partial xs) where
+instance (Ord tuple, Generic xs, Tuple f xs tuple)
+    => Ord (HKD f xs) where
   compare = compare `on` toTuple
 
-instance (Semigroup tuple, Generic xs, Tuple xs tuple)
-    => Semigroup (Partial xs) where
+instance (Semigroup tuple, Generic xs, Tuple f xs tuple)
+    => Semigroup (HKD f xs) where
   x <> y = fromTuple (toTuple x <> toTuple y)
 
-instance (Monoid tuple, Generic xs, Tuple xs tuple)
-    => Monoid (Partial xs) where
+instance (Monoid tuple, Generic xs, Tuple f xs tuple)
+    => Monoid (HKD f xs) where
   mempty = fromTuple mempty
 
 -------------------------------------------------------------------------------
 
-instance (Arbitrary tuple, GToTuple (Partial_ structure) tuple)
-    => Arbitrary (Partial structure) where
-  arbitrary = fmap (Partial . gfromTuple) arbitrary
+instance (Arbitrary tuple, GToTuple (HKD_ f structure) tuple)
+    => Arbitrary (HKD f structure) where
+  arbitrary = fmap (HKD . gfromTuple) arbitrary
 
-instance (CoArbitrary tuple, GToTuple (Partial_ structure) tuple)
-    => CoArbitrary (Partial structure) where
-  coarbitrary (Partial x) = coarbitrary (gtoTuple x)
+instance (CoArbitrary tuple, GToTuple (HKD_ f structure) tuple)
+    => CoArbitrary (HKD f structure) where
+  coarbitrary (HKD x) = coarbitrary (gtoTuple x)
 
-instance (Generic structure, Function tuple, Tuple structure tuple)
-    => Function (Partial structure) where
+instance (Generic structure, Function tuple, Tuple f structure tuple)
+    => Function (HKD f structure) where
   function = functionMap toTuple fromTuple
 
--- | We can 'show' a partial structure, and simply replace its missing fields
--- with "???".
---
--- >>> mempty @(Partial (Int, String, Bool))
--- (,,) ??? ??? ???
---
--- >>> import Data.Partial.Build
--- >>> toPartial ("Hello", True)
--- (,) "Hello" True
+-------------------------------------------------------------------------------
+
 class GShow (named :: Bool) (rep :: Type -> Type) where
   gshow :: rep p -> String
 
@@ -147,19 +151,19 @@ instance (GShow 'True inner, KnownSymbol field)
 instance GShow 'False inner => GShow 'False (S1 meta inner) where
   gshow (M1 inner) = gshow @'False inner
 
-instance Show inner => GShow named (K1 R (Last inner)) where
-  gshow (K1 x) = maybe "???" show (getLast x)
+instance (Show (f inner)) => GShow named (K1 R (f inner)) where
+  gshow (K1 x) = show x
 
-instance (Generic structure, GShow 'True (Partial_ structure))
-    => Show (Partial structure) where
-  show (Partial x) = gshow @'True x
+instance (Generic structure, GShow 'True (HKD_ f structure))
+    => Show (HKD f structure) where
+  show (HKD x) = gshow @'True x
 
 -------------------------------------------------------------------------------
 
-class Tuple (structure :: Type) (tuple :: Type)
-    | structure -> tuple where
-  toTuple   :: Partial structure -> tuple
-  fromTuple :: tuple -> Partial structure
+class Tuple (f :: Type -> Type) (structure :: Type) (tuple :: Type)
+    | f structure -> tuple where
+  toTuple   :: HKD f structure -> tuple
+  fromTuple :: tuple -> HKD f structure
 
 class Function tuple => GToTuple (rep :: Type -> Type) (tuple :: Type)
     | rep -> tuple where
@@ -180,7 +184,7 @@ instance Function inner => GToTuple (K1 index inner) inner where
   gfromTuple = K1
   gtoTuple = unK1
 
-instance (Generic structure, GToTuple (Partial_ structure) tuple)
-    => Tuple structure tuple where
-  toTuple = gtoTuple . runPartial
-  fromTuple = Partial . gfromTuple
+instance (Generic structure, GToTuple (HKD_ f structure) tuple)
+    => Tuple f structure tuple where
+  toTuple = gtoTuple . runHKD
+  fromTuple = HKD . gfromTuple

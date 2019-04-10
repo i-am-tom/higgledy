@@ -12,12 +12,13 @@ module Main where
 
 import Control.Lens (Lens', (.~), (^.))
 import Data.Function ((&))
-import Data.Partial
+import Data.Generic.HKD
 import GHC.Generics
 import Test.DocTest
 import Test.Hspec
 import Test.QuickCheck
 import Test.QuickCheck.Arbitrary
+import Data.Monoid (Last (..))
 
 main :: IO ()
 main = do
@@ -25,28 +26,28 @@ main = do
 
   hspec do
     describe "Unnamed" do
-      eq         @(Partial Triple)
-      ord        @(Partial Triple)
-      semigroup  @(Partial Triple)
-      idempotent @(Partial Triple)
-      monoid     @(Partial Triple)
+      eq         @(HKD Last Triple)
+      ord        @(HKD Last Triple)
+      semigroup  @(HKD Last Triple)
+      idempotent @(HKD Last Triple)
+      monoid     @(HKD Last Triple)
 
       partials @Triple
-      lens @(Partial Triple) (position @1)
-      lens @(Partial Triple) (position @2)
-      lens @(Partial Triple) (position @3)
+      lens @(HKD Maybe Triple) (position @1)
+      lens @(HKD Maybe Triple) (position @2)
+      lens @(HKD Maybe Triple) (position @3)
 
     describe "Named" do
-      eq         @(Partial Person)
-      ord        @(Partial Person)
-      semigroup  @(Partial Person)
-      idempotent @(Partial Person)
-      monoid     @(Partial Person)
+      eq         @(HKD Last Person)
+      ord        @(HKD Last Person)
+      semigroup  @(HKD Last Person)
+      idempotent @(HKD Last Person)
+      monoid     @(HKD Last Person)
 
       partials @Person
-      lens @(Partial Person) (field @"name")
-      lens @(Partial Person) (field @"age")
-      lens @(Partial Person) (field @"likesDogs")
+      lens @(HKD Maybe Person) (field @"name")
+      lens @(HKD Maybe Person) (field @"age")
+      lens @(HKD Maybe Person) (field @"likesDogs")
 
 -------------------------------------------------------------------------------
 
@@ -112,33 +113,25 @@ monoid = describe "Monoid" do
 
 partials
   :: forall a
-   . ( Arbitrary a, Arbitrary (Partial a)
-     , Eq        a, Eq        (Partial a)
-     , Show      a, Show      (Partial a)
+   . ( Arbitrary a, Arbitrary (HKD Last a)
+     , Show      a, Show      (HKD Last a)
+     , Ord       a, Ord       (HKD Last a)
 
-     , Defaults a
      , Generic a
-     , HasPartial a
-     , Monoid (Partial a)
+     , Construct Last a
+     , Monoid (HKD Last a)
      )
   => SpecWith ()
 
-partials = describe "Partial" do
+partials = describe "HKD" do
   describe "Eq" do
     it "is monotonic with respect to ordering"
-      $ property \(x :: Person) y ->
-          (x <= y) == (toPartial x <= toPartial y)
+      $ property \(x :: a) y ->
+          (x <= y) == (deconstruct @Last x <= deconstruct @Last y)
 
-  describe "toPartial / fromPartial" do
-    it "round-trips" $ property \(x :: a) ->
-      fromPartial (toPartial x) == Just x
-
-  describe "withDefaults" do
-    it "populates from defaults" $ property \(x :: a) ->
-      withDefaults x mempty == x
-
-    it "overwrites with partials" $ property \(x :: a) (y :: Partial a) ->
-      toPartial (withDefaults x y) == toPartial x <> y
+    it "round-trips"
+      $ property \(x :: a) ->
+          construct (deconstruct @Last x) == pure x
 
 lens
   :: forall s a
