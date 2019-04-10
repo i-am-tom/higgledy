@@ -25,8 +25,8 @@ module Data.Generic.HKD.Field
 
 import Control.Lens (Lens', dimap)
 import Data.Generic.HKD.Types (HKD (..), HKD_)
-import Data.Kind (Type)
-import GHC.TypeLits (Symbol)
+import Data.Kind (Constraint, Type)
+import GHC.TypeLits (ErrorMessage (..), Symbol, TypeError)
 import qualified Data.GenericLens.Internal as G
 import qualified Data.Generics.Internal.VL.Lens as G
 
@@ -58,6 +58,10 @@ import qualified Data.Generics.Internal.VL.Lens as G
 -- message to point us in the right direction:
 --
 -- >>> total & field @"oops" .~ pure ()
+-- ...
+-- ... error:
+-- ... • The type User does not contain a field named 'oops'.
+-- ...
 class HasField'
     (field     ::       Symbol)
     (f         :: Type -> Type)
@@ -66,9 +70,35 @@ class HasField'
     | field f structure -> focus where
   field :: Lens' (HKD f structure) (f focus)
 
-data FieldPredicate :: Symbol -> G.TyFun (Type -> Type) (Maybe Type)
-type instance G.Eval (FieldPredicate sym) tt = G.HasTotalFieldP sym tt
+data HasTotalFieldPSym :: Symbol -> (G.TyFun (Type -> Type) (Maybe Type))
+type instance G.Eval (HasTotalFieldPSym sym) tt = G.HasTotalFieldP sym tt
 
-instance G.GLens' (FieldPredicate field) (HKD_ f structure) (f focus)
-    => HasField' field f structure focus where
-  field = G.ravel (dimap runHKD HKD . G.glens @(FieldPredicate field))
+instance
+    ( ErrorUnless field structure (G.CollectField field (HKD_ f structure))
+    , G.GLens' (HasTotalFieldPSym field) (HKD_ f structure) (f focus)
+    ) => HasField' field f structure focus where
+  field = G.ravel (dimap runHKD HKD . G.glens @(HasTotalFieldPSym field))
+
+-- We'll import this from actual generic-lens as soon as possible:
+
+type family ErrorUnless (field :: Symbol) (s :: Type) (stat :: G.TypeStat) :: Constraint where
+  ErrorUnless field s ('G.TypeStat _ _ '[])
+    = TypeError
+        (     'Text "The type "
+        ':<>: 'ShowType s
+        ':<>: 'Text " does not contain a field named '"
+        ':<>: 'Text field ':<>: 'Text "'."
+        )
+
+  ErrorUnless field s ('G.TypeStat (n ': ns) _ _)
+    = TypeError
+        (     'Text "Not all constructors of the type "
+        ':<>: 'ShowType s
+        ':$$: 'Text " contain a field named '"
+        ':<>: 'Text field ':<>: 'Text "'."
+        ':$$: 'Text "The offending constructors are:"
+        ':$$: G.ShowSymbols (n ': ns)
+        )
+
+  ErrorUnless _ _ ('G.TypeStat '[] '[] _)
+    = ()
