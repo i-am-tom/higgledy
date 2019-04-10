@@ -39,7 +39,7 @@ import GHC.Generics
 -- >>> :set -XTypeApplications
 -- >>> import Data.Monoid (Last)
 --
--- >>> construct (mempty @(HKD Last (Int, Bool)))
+-- >>> construct (mempty @(HKD (Int, Bool) Last))
 -- Last {getLast = Nothing}
 --
 -- We can also /deconstruct/ a tuple into a partial structure:

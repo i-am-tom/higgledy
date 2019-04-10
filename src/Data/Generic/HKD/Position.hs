@@ -41,8 +41,8 @@ import Data.Generics.Internal.Profunctor.Lens (ALens)
 --
 -- >>> import Control.Lens ((^.))
 --
--- >>> :t mempty @(HKD [] (Int, String)) ^. position @1
--- mempty @(HKD [] (Int, String)) ^. position @1 :: [Int]
+-- >>> :t mempty @(HKD (Int, String) []) ^. position @1
+-- mempty @(HKD (Int, String) []) ^. position @1 :: [Int]
 --
 -- As we're using the wonderful @generic-lens@ library under the hood, we also
 -- get some beautiful error messages when things go awry:

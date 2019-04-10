@@ -68,14 +68,14 @@ import Test.QuickCheck.Function (Function (..), functionMap)
 -- lifting. In other words, we can define a synonym for our behaviour:
 --
 -- >>> import Data.Monoid (Last (..))
--- >>> type Partial = HKD Last
+-- >>> type Partial a = HKD a Last
 --
 -- ... and then we're ready to go!
 --
 -- >>> mempty @(Partial User)
 -- User {name = Last {getLast = Nothing}, age = Last {getLast = Nothing}}
 --
--- >>> mempty @(HKD [] (Int, Bool))
+-- >>> mempty @(HKD (Int, Bool) [])
 -- (,) [] []
 newtype HKD (structure :: Type) (f :: Type -> Type)
   = HKD { runHKD :: HKD_ f structure Void }

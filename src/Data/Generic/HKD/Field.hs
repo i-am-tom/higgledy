@@ -40,7 +40,7 @@ import qualified Data.Generics.Internal.VL.Lens as G
 -- >>> import GHC.Generics
 --
 -- >>> data User = User { name :: String, age :: Int } deriving (Generic, Show)
--- >>> type Partial = HKD Last
+-- >>> type Partial a = HKD a Last
 --
 -- We can create an empty partial @User@ and set its name to "Tom" (which, in
 -- this case, is @pure "Tom" :: Last String@):

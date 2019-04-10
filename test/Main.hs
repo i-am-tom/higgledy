@@ -11,14 +11,18 @@
 module Main where
 
 import Control.Lens (Lens', (.~), (^.))
-import Data.Function ((&))
+import Data.Function ((&), on)
+import Data.Functor.Identity (Identity (..))
 import Data.Generic.HKD
+import Data.Monoid (Last (..))
 import GHC.Generics
 import Test.DocTest
 import Test.Hspec
 import Test.QuickCheck
 import Test.QuickCheck.Arbitrary
-import Data.Monoid (Last (..))
+
+type Partial a = HKD a Last
+type WTF     a = HKD a []
 
 main :: IO ()
 main = do
@@ -26,28 +30,48 @@ main = do
 
   hspec do
     describe "Unnamed" do
-      eq         @(HKD Last Triple)
-      ord        @(HKD Last Triple)
-      semigroup  @(HKD Last Triple)
-      idempotent @(HKD Last Triple)
-      monoid     @(HKD Last Triple)
+      eq         @(Partial Triple)
+      ord        @(Partial Triple)
+      semigroup  @(Partial Triple)
+      idempotent @(Partial Triple)
+      monoid     @(Partial Triple)
 
-      partials @Triple
-      lens @(HKD Maybe Triple) (position @1)
-      lens @(HKD Maybe Triple) (position @2)
-      lens @(HKD Maybe Triple) (position @3)
+      eq        @(WTF Triple)
+      ord       @(WTF Triple)
+      semigroup @(WTF Triple)
+      monoid    @(WTF Triple)
+
+      lens @(Partial Triple) (position @1)
+      lens @(Partial Triple) (position @2)
+      lens @(Partial Triple) (position @3)
+
+      lens @(WTF Triple) (position @1)
+      lens @(WTF Triple) (position @2)
+      lens @(WTF Triple) (position @3)
 
     describe "Named" do
-      eq         @(HKD Last Person)
-      ord        @(HKD Last Person)
-      semigroup  @(HKD Last Person)
-      idempotent @(HKD Last Person)
-      monoid     @(HKD Last Person)
+      eq         @(Partial Person)
+      ord        @(Partial Person)
+      semigroup  @(Partial Person)
+      idempotent @(Partial Person)
+      monoid     @(Partial Person)
 
-      partials @Person
-      lens @(HKD Maybe Person) (field @"name")
-      lens @(HKD Maybe Person) (field @"age")
-      lens @(HKD Maybe Person) (field @"likesDogs")
+      eq        @(WTF Person)
+      ord       @(WTF Person)
+      semigroup @(WTF Person)
+      monoid    @(WTF Person)
+
+      lens @(WTF Person) (position @1)
+      lens @(WTF Person) (position @2)
+      lens @(WTF Person) (position @3)
+
+      lens @(Partial Person) (field @"name")
+      lens @(Partial Person) (field @"age")
+      lens @(Partial Person) (field @"likesDogs")
+
+      lens @(WTF Person) (field @"name")
+      lens @(WTF Person) (field @"age")
+      lens @(WTF Person) (field @"likesDogs")
 
 -------------------------------------------------------------------------------
 
@@ -66,12 +90,21 @@ data Triple
 instance Arbitrary Person where
   arbitrary = Person <$> arbitrary <*> arbitrary <*> arbitrary
 
+instance CoArbitrary Person
+instance Function    Person
+
 instance Arbitrary Triple where
   arbitrary = Triple <$> arbitrary <*> arbitrary <*> arbitrary
 
+instance CoArbitrary Triple
+instance Function    Triple
+
 -------------------------------------------------------------------------------
 
-eq :: forall a. (Arbitrary a, CoArbitrary a, Eq a, Function a, Show a) => SpecWith ()
+eq
+  :: forall a. (Arbitrary a, CoArbitrary a, Eq a, Function a, Show a)
+  => SpecWith ()
+
 eq = describe "Eq" do
   it "is reflexive" $ property \(x :: a) ->
     x == x
@@ -111,28 +144,6 @@ monoid = describe "Monoid" do
   it "has left identity"  $ property \(x :: a) -> mempty <> x == x
   it "has right identity" $ property \(x :: a) -> x <> mempty == x
 
-partials
-  :: forall a
-   . ( Arbitrary a, Arbitrary (HKD Last a)
-     , Show      a, Show      (HKD Last a)
-     , Ord       a, Ord       (HKD Last a)
-
-     , Generic a
-     , Construct Last a
-     , Monoid (HKD Last a)
-     )
-  => SpecWith ()
-
-partials = describe "HKD" do
-  describe "Eq" do
-    it "is monotonic with respect to ordering"
-      $ property \(x :: a) y ->
-          (x <= y) == (deconstruct @Last x <= deconstruct @Last y)
-
-    it "round-trips"
-      $ property \(x :: a) ->
-          construct (deconstruct @Last x) == pure x
-
 lens
   :: forall s a
    . ( Arbitrary s, Arbitrary a
@@ -151,3 +162,34 @@ lens l = describe "Lens laws" do
 
   it "- set l b . set l a == set l b" $ property \(s :: s) (a :: a) (b :: a) ->
     (s & l .~ a & l .~ b) == (s & l .~ b)
+
+-------------------------------------------------------------------------------
+
+partials
+  :: forall a
+   . ( Arbitrary a
+     , Show      a
+     , Ord       a
+     , Generic   a
+     , Construct Last a
+     , Construct [] a
+     , Ord       (Partial a)
+     , Ord       (WTF     a)
+     )
+  => SpecWith ()
+
+partials = describe "HKD" do
+  describe "Eq" do
+    it "is monotonic with respect to ordering (Partial)"
+      $ property \(x :: a) y -> (x <= y) == ((<=) `on` deconstruct @Last) x y
+
+    it "is monotonic with respect to ordering (WTF)"
+      $ property \(x :: a) y -> (x <= y) == ((<=) `on` deconstruct @[]) x y
+
+    it "round-trips"
+      $ property \(x :: a) ->
+          construct (deconstruct @Last x) == pure x
+
+    it "round-trips"
+      $ property \(x :: a) ->
+          construct (deconstruct @[] x) == pure x
