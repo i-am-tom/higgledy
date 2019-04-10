@@ -1,12 +1,16 @@
 {-# OPTIONS_HADDOCK not-home #-}
 
 {-# LANGUAGE AllowAmbiguousTypes    #-}
+{-# LANGUAGE ConstraintKinds        #-}
 {-# LANGUAGE DataKinds              #-}
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE InstanceSigs           #-}
+{-# LANGUAGE RankNTypes             #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
 {-# LANGUAGE TypeApplications       #-}
 {-# LANGUAGE TypeFamilies           #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE UndecidableInstances   #-}
 
@@ -25,8 +29,11 @@ module Data.Generic.HKD.Types
   , GHKD_
   ) where
 
+import Data.Barbie (ConstraintsB (..), FunctorB (..), ProductB (..), ProductBC (..), TraversableB (..))
+import Data.Barbie.Constraints (Dict (..))
 import Data.Function (on)
-import Data.Kind (Type)
+import Data.Functor.Product (Product (..))
+import Data.Kind (Constraint, Type)
 import Data.Proxy (Proxy (..))
 import Data.Void (Void)
 import GHC.Generics
@@ -70,7 +77,7 @@ import Test.QuickCheck.Function (Function (..), functionMap)
 --
 -- >>> mempty @(HKD [] (Int, Bool))
 -- (,) [] []
-newtype HKD (f :: Type -> Type) (structure :: Type)
+newtype HKD (structure :: Type) (f :: Type -> Type)
   = HKD { runHKD :: HKD_ f structure Void }
 
 -------------------------------------------------------------------------------
@@ -80,44 +87,43 @@ type HKD_ (f :: Type -> Type) (structure :: Type)
   = GHKD_ f (Rep structure)
 
 -- | Calculate the "partial representation" of a generic rep.
-type family GHKD_ (f :: Type -> Type) (rep :: Type -> Type) :: Type -> Type where
+type family GHKD_ (f :: Type -> Type) (rep :: Type -> Type)
+    = (output :: Type -> Type) | output -> f rep where
   GHKD_ f (M1 index meta inner) = M1 index meta (GHKD_ f inner)
   GHKD_ f (left :*: right)      = GHKD_ f left :*: GHKD_ f right
   GHKD_ f (K1 index value)      = K1 index (f value)
   GHKD_ f (left :+: right)      = GHKD_ f left :+: GHKD_ f right
-  GHKD_ f  U1                   = U1
-  GHKD_ f  V1                   = V1
 
 -------------------------------------------------------------------------------
 
 instance (Eq tuple, Generic xs, Tuple f xs tuple)
-    => Eq (HKD f xs) where
+    => Eq (HKD xs f) where
   (==) = (==) `on` toTuple
 
 instance (Ord tuple, Generic xs, Tuple f xs tuple)
-    => Ord (HKD f xs) where
+    => Ord (HKD xs f) where
   compare = compare `on` toTuple
 
 instance (Semigroup tuple, Generic xs, Tuple f xs tuple)
-    => Semigroup (HKD f xs) where
+    => Semigroup (HKD xs f) where
   x <> y = fromTuple (toTuple x <> toTuple y)
 
 instance (Monoid tuple, Generic xs, Tuple f xs tuple)
-    => Monoid (HKD f xs) where
+    => Monoid (HKD xs f) where
   mempty = fromTuple mempty
 
 -------------------------------------------------------------------------------
 
 instance (Arbitrary tuple, GToTuple (HKD_ f structure) tuple)
-    => Arbitrary (HKD f structure) where
+    => Arbitrary (HKD structure f) where
   arbitrary = fmap (HKD . gfromTuple) arbitrary
 
 instance (CoArbitrary tuple, GToTuple (HKD_ f structure) tuple)
-    => CoArbitrary (HKD f structure) where
+    => CoArbitrary (HKD structure f) where
   coarbitrary (HKD x) = coarbitrary (gtoTuple x)
 
 instance (Generic structure, Function tuple, Tuple f structure tuple)
-    => Function (HKD f structure) where
+    => Function (HKD structure f) where
   function = functionMap toTuple fromTuple
 
 -------------------------------------------------------------------------------
@@ -155,15 +161,15 @@ instance (Show (f inner)) => GShow named (K1 R (f inner)) where
   gshow (K1 x) = show x
 
 instance (Generic structure, GShow 'True (HKD_ f structure))
-    => Show (HKD f structure) where
+    => Show (HKD structure f) where
   show (HKD x) = gshow @'True x
 
 -------------------------------------------------------------------------------
 
 class Tuple (f :: Type -> Type) (structure :: Type) (tuple :: Type)
     | f structure -> tuple where
-  toTuple   :: HKD f structure -> tuple
-  fromTuple :: tuple -> HKD f structure
+  toTuple   :: HKD structure f -> tuple
+  fromTuple :: tuple -> HKD structure f
 
 class Function tuple => GToTuple (rep :: Type -> Type) (tuple :: Type)
     | rep -> tuple where
@@ -188,3 +194,124 @@ instance (Generic structure, GToTuple (HKD_ f structure) tuple)
     => Tuple f structure tuple where
   toTuple = gtoTuple . runHKD
   fromTuple = HKD . gfromTuple
+
+-------------------------------------------------------------------------------
+
+class GFunctorB (rep :: Type -> Type) where
+  gbmap :: (forall a. f a -> g a) -> GHKD_ f rep p -> GHKD_ g rep p
+
+instance GFunctorB inner => GFunctorB (M1 index meta inner) where
+  gbmap f = M1 . gbmap @inner f . unM1
+
+instance (GFunctorB left, GFunctorB right)
+    => GFunctorB (left :*: right) where
+  gbmap f (left :*: right) = gbmap @left f left :*: gbmap @right f right
+
+instance GFunctorB (K1 index inner) where
+  gbmap f (K1 x) = K1 (f x)
+
+instance GFunctorB (Rep structure) => FunctorB (HKD structure) where
+  bmap f = HKD . gbmap @(Rep structure) f . runHKD
+
+-------------------------------------------------------------------------------
+
+class GTraversableB (rep :: Type -> Type) where
+  gbtraverse
+    :: Applicative t
+    => (forall a. f a -> t (g a))
+    -> GHKD_ f rep p -> t (GHKD_ g rep p)
+
+instance GTraversableB inner => GTraversableB (M1 index meta inner) where
+  gbtraverse f = fmap M1 . gbtraverse @inner f . unM1
+
+instance (GTraversableB left, GTraversableB right)
+    => GTraversableB (left :*: right) where
+  gbtraverse f (left :*: right)
+    = (:*:) <$> gbtraverse @left  f left
+            <*> gbtraverse @right f right
+
+instance GTraversableB (K1 index inner) where
+  gbtraverse f (K1 x) = fmap K1 (f x)
+
+instance (FunctorB (HKD structure), GTraversableB (Rep structure))
+    => TraversableB (HKD structure) where
+  btraverse f = fmap HKD . gbtraverse @(Rep structure) f . runHKD
+
+-------------------------------------------------------------------------------
+
+class GProductB (rep :: Type -> Type) where
+  gbprod :: GHKD_ f rep p -> GHKD_ g rep p -> GHKD_ (f `Product` g) rep p
+  gbuniq :: (forall a. f a) -> GHKD_ f rep p
+
+instance GProductB inner => GProductB (M1 index meta inner) where
+  gbprod (M1 x) (M1 y) = M1 (gbprod @inner x y)
+  gbuniq zero = M1 (gbuniq @inner zero)
+
+instance (GProductB left, GProductB right)
+    => GProductB (left :*: right) where
+  gbprod (leftX :*: rightX) (leftY :*: rightY)
+    = gbprod @left leftX leftY :*: gbprod @right rightX rightY
+
+  gbuniq zero
+    = gbuniq @left zero :*: gbuniq @right zero
+
+instance GProductB (K1 index inner) where
+  gbprod (K1 x) (K1 y) = K1 (Pair x y)
+  gbuniq zero = K1 zero
+
+instance (FunctorB (HKD structure), GProductB (Rep structure))
+    => ProductB (HKD structure) where
+  bprod (HKD x) (HKD y) = HKD (gbprod @(Rep structure) x y)
+  buniq zero            = HKD (gbuniq @(Rep structure) zero)
+
+-------------------------------------------------------------------------------
+
+class GConstraintsB (rep :: Type -> Type) where
+  type GAllB (c :: Type -> Constraint) rep :: Constraint
+
+  gbaddDicts :: GAllB c rep => GHKD_ f rep p -> GHKD_ (Dict c `Product` f) rep p
+
+instance GConstraintsB inner => GConstraintsB (M1 index meta inner) where
+  type GAllB c (M1 index meta inner) = GAllB c inner
+
+  gbaddDicts (M1 x) = M1 (gbaddDicts @inner x)
+
+instance (GConstraintsB left, GConstraintsB right)
+    => GConstraintsB (left :*: right) where
+  type GAllB c (left :*: right) = (GAllB c left, GAllB c right)
+
+  gbaddDicts (left :*: right)
+    = gbaddDicts @left left :*: gbaddDicts @right right
+
+instance c inner => GConstraintsB (K1 index inner) where
+  type GAllB c (K1 index inner) = c inner
+
+  gbaddDicts (K1 x)
+    = K1 (Pair Dict x)
+
+instance (FunctorB (HKD structure), GConstraintsB (Rep structure))
+    => ConstraintsB (HKD structure) where
+  type AllB c (HKD structure) = GAllB c (Rep structure)
+  baddDicts (HKD x) = HKD (gbaddDicts @(Rep structure) x)
+
+-------------------------------------------------------------------------------
+
+class GProductBC (rep :: Type -> Type) where
+  gbdicts :: GAllB c rep => GHKD_ (Dict c) rep p
+
+instance GProductBC inner => GProductBC (M1 index meta inner) where
+  gbdicts = M1 gbdicts
+
+instance (GProductBC left, GProductBC right)
+    => GProductBC (left :*: right) where
+  gbdicts = gbdicts :*: gbdicts
+
+instance GProductBC (K1 index inner) where
+  gbdicts = K1 Dict
+
+instance
+    ( ProductB (HKD structure)
+    , ConstraintsB (HKD structure)
+    , GProductBC (Rep structure)
+    ) => ProductBC (HKD structure) where
+  bdicts = HKD gbdicts

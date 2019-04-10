@@ -55,7 +55,7 @@ import Data.Generics.Internal.Profunctor.Lens (ALens)
 -- ...
 class HasPosition' (index :: Nat) (f :: Type -> Type) (structure :: Type) (focus :: Type)
     | index f structure -> focus where
-  position :: Lens' (HKD f structure) (f focus)
+  position :: Lens' (HKD structure f) (f focus)
 
 data HasTotalPositionPSym :: Nat -> (G.TyFun (Type -> Type) (Maybe Type))
 type instance G.Eval (HasTotalPositionPSym t) tt = G.HasTotalPositionP t tt

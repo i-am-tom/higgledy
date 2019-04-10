@@ -51,8 +51,8 @@ import GHC.Generics
 --
 -- prop> construct (deconstruct x) == [ x :: (Int, Bool, String) ]
 class Construct (f :: Type -> Type) (structure :: Type) where
-  construct   :: HKD f structure -> f structure
-  deconstruct :: structure -> HKD f structure
+  construct   :: HKD structure f -> f structure
+  deconstruct :: structure -> HKD structure f
 
 class GConstruct (f :: Type -> Type) (rep :: Type -> Type) where
   gconstruct   :: GHKD_ f rep p -> f (rep p)

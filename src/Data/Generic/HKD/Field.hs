@@ -68,7 +68,7 @@ class HasField'
     (structure ::         Type)
     (focus     ::         Type)
     | field f structure -> focus where
-  field :: Lens' (HKD f structure) (f focus)
+  field :: Lens' (HKD structure f) (f focus)
 
 data HasTotalFieldPSym :: Symbol -> (G.TyFun (Type -> Type) (Maybe Type))
 type instance G.Eval (HasTotalFieldPSym sym) tt = G.HasTotalFieldP sym tt
