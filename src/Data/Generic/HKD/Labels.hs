@@ -91,4 +91,4 @@ labelsWhere p xs
   = getConst (btraverse go (label xs `bprod` xs))
   where
     go :: Product (Const String) f a -> (Const [String]) (Maybe a)
-    go (Pair (Const key) value) = Const (if p value then [key] else [])
+    go (Pair (Const key) value) = Const if p value then [key] else []
