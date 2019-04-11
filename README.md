@@ -35,7 +35,7 @@ data User
   deriving Generic
 
 -- HKD for free!
-type UserF f = HKD UserF f
+type UserF f = HKD User f
 ```
 
 As an added little bonus, any `HKD`-wrapped object is automatically an instance
