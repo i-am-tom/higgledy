@@ -22,7 +22,8 @@ data User f
 This is good - we can use `f ~ Maybe` for partial data, `f ~ Identity` for
 complete data, etc - but it introduces a fair amount of noise, and we have a
 lot of boilerplate deriving to do. Wouldn't it be nice if we could get back to
-writing simple types as we know and love them, and get all this stuff for free?
+writing simple types as we know and love them, and get all this stuff for
+_free_?
 
 ```haskell
 data User
@@ -33,7 +34,7 @@ data User
       }
   deriving Generic
 
--- We can recover something isomorphic to the first example with:
+-- HKD for free!
 type UserF f = HKD UserF f
 ```
 
