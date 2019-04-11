@@ -14,7 +14,7 @@ data User f
   = User
       { name :: f String
       , age  :: f Int
-        ...
+      , ...
       }
   deriving (FunctorB, ProductB, ...)
 ```
