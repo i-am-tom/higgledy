@@ -16,7 +16,6 @@ data User f
       , age  :: f Int
       , ...
       }
-  deriving (FunctorB, ProductB, ...)
 ```
 
 This is good - we can use `f ~ Maybe` for partial data, `f ~ Identity` for
@@ -35,7 +34,7 @@ data User
   deriving Generic
 
 -- HKD for free!
-type UserF f = HKD UserF f
+type UserF f = HKD User f
 ```
 
 As an added little bonus, any `HKD`-wrapped object is automatically an instance
@@ -199,8 +198,9 @@ eg8 = anyOf (field @"name") (isJust . getLast) eg0
 -- False
 ```
 
-Finally, thanks to the internals of `generic-lens`, we'll also get a nice type
-error when we mention a field that doesn't exist in our type:
+Finally, thanks to the fact that this library exploits some of the internals of
+`generic-lens`, we'll also get a nice type error when we mention a field that
+doesn't exist in our type:
 
 ```haskell
 eg9 :: Identity ()
