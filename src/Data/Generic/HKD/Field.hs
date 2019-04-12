@@ -23,9 +23,10 @@ module Data.Generic.HKD.Field
   ( HasField' (..)
   ) where
 
-import Control.Lens (Lens', dimap)
+import Data.Coerce (coerce)
 import Data.Generic.HKD.Types (HKD (..), HKD_)
 import Data.Kind (Constraint, Type)
+import Data.Void (Void)
 import GHC.TypeLits (ErrorMessage (..), Symbol, TypeError)
 import qualified Data.GenericLens.Internal as G
 import qualified Data.Generics.Internal.VL.Lens as G
@@ -68,7 +69,7 @@ class HasField'
     (structure ::         Type)
     (focus     ::         Type)
     | field f structure -> focus where
-  field :: Lens' (HKD structure f) (f focus)
+  field :: G.Lens' (HKD structure f) (f focus)
 
 data HasTotalFieldPSym :: Symbol -> (G.TyFun (Type -> Type) (Maybe Type))
 type instance G.Eval (HasTotalFieldPSym sym) tt = G.HasTotalFieldP sym tt
@@ -77,7 +78,10 @@ instance
     ( ErrorUnless field structure (G.CollectField field (HKD_ f structure))
     , G.GLens' (HasTotalFieldPSym field) (HKD_ f structure) (f focus)
     ) => HasField' field f structure focus where
-  field = G.ravel (dimap runHKD HKD . G.glens @(HasTotalFieldPSym field))
+  field = coerced . G.ravel (G.glens @(HasTotalFieldPSym field))
+    where
+      coerced :: G.Lens' (HKD structure f) (HKD_ f structure Void)
+      coerced f = fmap coerce . f . coerce
 
 -- We'll import this from actual generic-lens as soon as possible:
 

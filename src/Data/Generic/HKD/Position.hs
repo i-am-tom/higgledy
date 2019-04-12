@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE PolyKinds              #-}
+{-# LANGUAGE RankNTypes             #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
 {-# LANGUAGE TypeApplications       #-}
 {-# LANGUAGE TypeFamilies           #-}
@@ -25,7 +26,7 @@ module Data.Generic.HKD.Position
 
 import Data.Coerce (Coercible, coerce)
 import Data.Type.Bool (type (&&))
-import Control.Lens (Lens', dimap)
+import Data.Void (Void)
 import GHC.Generics
 import Data.Generic.HKD.Types (HKD (..), HKD_)
 import Data.Kind (Constraint, Type)
@@ -55,7 +56,7 @@ import Data.Generics.Internal.Profunctor.Lens (ALens)
 -- ...
 class HasPosition' (index :: Nat) (f :: Type -> Type) (structure :: Type) (focus :: Type)
     | index f structure -> focus where
-  position :: Lens' (HKD structure f) (f focus)
+  position :: G.Lens' (HKD structure f) (f focus)
 
 data HasTotalPositionPSym :: Nat -> (G.TyFun (Type -> Type) (Maybe Type))
 type instance G.Eval (HasTotalPositionPSym t) tt = G.HasTotalPositionP t tt
@@ -64,16 +65,20 @@ instance
     ( Generic structure
     , ErrorUnless index structure (0 <? index && index <=? G.Size (Rep structure))
     , G.GLens' (HasTotalPositionPSym index) (CRep f structure) (f focus)
+
     , G.HasTotalPositionP index (CRep f structure) ~ 'Just (f focus)
     , G.HasTotalPositionP index (CRep f (G.Indexed structure)) ~ 'Just (f' focus')
+
+    , Coercible (HKD structure f) (CRep f structure Void)
     , structure ~ G.Infer structure (f' focus') (f focus)
-    , Coercible (CRep f structure) (HKD_ f structure)
     ) => HasPosition' index f structure focus where
-  position = G.ravel (dimap runHKD HKD . go . G.glens @(HasTotalPositionPSym index))
+  position = coerced . glens
     where
-      go :: ALens (f focus) (f focus) (CRep f structure p) (CRep f structure p)
-         -> ALens (f focus) (f focus) (HKD_ f structure p) (HKD_ f structure p)
-      go = coerce
+      glens :: G.Lens' (CRep f structure Void) (f focus)
+      glens = G.ravel (G.glens @(HasTotalPositionPSym index))
+
+      coerced :: G.Lens' (HKD structure f) (CRep f structure Void)
+      coerced f = fmap coerce . f . coerce
 
 -- Again: to be imported from generic-lens.
 
