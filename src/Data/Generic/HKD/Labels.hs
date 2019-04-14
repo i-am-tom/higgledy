@@ -10,7 +10,10 @@
 {-# LANGUAGE TypeApplications       #-}
 {-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE UndecidableInstances   #-}
-module Data.Generic.HKD.Labels where
+module Data.Generic.HKD.Labels
+  ( Label (..)
+  , labelsWhere
+  ) where
 
 import Data.Barbie (ProductB (..), TraversableB (..))
 import Data.Functor.Const (Const (..))

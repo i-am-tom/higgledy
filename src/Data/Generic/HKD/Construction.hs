@@ -20,7 +20,9 @@ License     : MIT
 Maintainer  : tom.harding@habito.com
 Stability   : experimental
 -}
-module Data.Generic.HKD.Construction where
+module Data.Generic.HKD.Construction
+  ( Construct (..)
+  ) where
 
 import Data.Generic.HKD.Types (HKD (..), GHKD_)
 import Data.Kind (Type)

@@ -47,8 +47,8 @@ import Test.QuickCheck.Function (Function (..), functionMap)
 -- @
 --   data User f
 --    = User
---        { name      :: f String
---        , age       :: f Int
+--        { name :: f String
+--        , age  :: f Int
 --        }
 -- @
 --
