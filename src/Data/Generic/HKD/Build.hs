@@ -62,7 +62,7 @@ instance (Generic shape, GFill f with '[] (Rep shape))
 --
 -- This isn't always the case, however: if all the component parts of our type
 -- are gathered using some 'IO' action, we'd like to construct something like
--- 'HKD MyType IO', and @IO a@ isn't a 'Monoid' for all types @a@. When this
+-- @HKD MyType IO@, and @IO a@ isn't a 'Monoid' for all types @a@. When this
 -- happens, we need to pass in our parameters /when/ we build our structure.
 --
 -- The 'build' function lets us construct our type by passing explicit values

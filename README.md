@@ -53,6 +53,8 @@ example data types:
 module Example where
 
 import Control.Lens ((.~), (^.), (&), Const (..), Identity, anyOf)
+import Data.Funtor.Const (Const (..))
+import Data.Funtor.Identity (Identity (..))
 import Data.Generic.HKD
 import Data.Maybe (isJust, isNothing)
 import Data.Monoid (Last (..))
@@ -163,14 +165,27 @@ eg5 = construct eg4
 -- Last {getLast = Just (Triple 123 () "ABC")}
 ```
 
+If none of the above suit your needs, maybe you want to try `build` on for
+size. This function constructs an `HKD`-wrapped version of the type supplied to
+it by taking all its parameters. In other words:
+
+```haskell
+eg6 :: f Int -> f () -> f String -> HKD Triple f
+eg6 = build @Triple
+
+eg7 :: HKD Triple []
+eg7 = eg6 [1] [] ["Tom", "Tim"]
+-- Triple [1] [] ["Tom","Tim"]
+```
+
 ### Field Access
 
 The `field` lens, when given a type-applied field name, allows us to focus on
 fields within a record:
 
 ```haskell
-eg6 :: Last Int
-eg6 = eg0 ^. field @"age"
+eg8 :: Last Int
+eg8 = eg0 ^. field @"age"
 -- Last {getLast = Nothing}
 ```
 
@@ -179,8 +194,8 @@ record (note that these set values will _also_ need to be in our functor of
 choice):
 
 ```haskell
-eg7 :: Partial User
-eg7 = eg0 & field @"name"      .~ pure "Evil Tom"
+eg9 :: Partial User
+eg9 = eg0 & field @"name"      .~ pure "Evil Tom"
           & field @"likesDogs" .~ pure False     
 -- User
 --   { name      = Last {getLast = Just "Evil Tom"}
@@ -193,8 +208,8 @@ This also means, for example, we can check whether a particular value has been
 completed for a given partial type:
 
 ```haskell
-eg8 :: Bool
-eg8 = anyOf (field @"name") (isJust . getLast) eg0
+eg10 :: Bool
+eg10 = anyOf (field @"name") (isJust . getLast) eg0
 -- False
 ```
 
@@ -203,8 +218,8 @@ Finally, thanks to the fact that this library exploits some of the internals of
 doesn't exist in our type:
 
 ```haskell
-eg9 :: Identity ()
-eg9 = eg3 ^. field @"oops"
+eg11 :: Identity ()
+eg11 = eg3 ^. field @"oops"
 -- error:
 -- • The type User does not contain a field named 'oops'.
 ```
@@ -215,8 +230,8 @@ Just as with field names, we can use positions when working with non-record
 product types:
 
 ```haskell
-eg10 :: Labels Triple
-eg10 = mempty & position @1 .~ Const "hello"
+eg12 :: Labels Triple
+eg12 = mempty & position @1 .~ Const "hello"
               & position @2 .~ Const "world"
 -- Triple
 --   Const "hello"
@@ -227,8 +242,8 @@ eg10 = mempty & position @1 .~ Const "hello"
 Again, this is a `Lens`, so we can just as easily _set_ values:
 
 ```haskell
-eg11 :: Partial User
-eg11 = eg7 & position @2 .~ pure 25
+eg13 :: Partial User
+eg13 = eg9 & position @2 .~ pure 25
 -- User
 --   { name      = Last {getLast = Just "Evil Tom"}
 --   , age       = Last {getLast = Just 25}
@@ -240,8 +255,8 @@ Similarly, the internals here come to us courtesy of `generic-lens`, so the
 type errors are a delight:
 
 ```haskell
-eg9 :: Identity ()
-eg9 = deconstruct @Identity triple ^. position @4
+eg14 :: Identity ()
+eg14 = deconstruct @Identity triple ^. position @4
 -- error:
 -- • The type Triple does not contain a field at position 4
 ```
@@ -253,8 +268,8 @@ names of the fields into the functor we're using. The `label` function gives us
 this interface:
 
 ```haskell
-eg10 :: Labels User
-eg10 = label eg11
+eg15 :: Labels User
+eg15 = label eg13
 -- User
 --   { name = Const "name"
 --   , age = Const "age"
@@ -269,7 +284,7 @@ can implement functions such as `labelsWhere`, which returns the names of all
 fields whose values satisfy some predicate:
 
 ```haskell
-eg13 :: [String]
-eg13 = labelsWhere (isNothing . getLast) eg7
+eg16 :: [String]
+eg16 = labelsWhere (isNothing . getLast) eg9
 -- ["age"]
 ```
