@@ -12,14 +12,12 @@ module Main where
 
 import Control.Lens (Lens', (.~), (^.))
 import Data.Function ((&), on)
-import Data.Functor.Identity (Identity (..))
 import Data.Generic.HKD
 import Data.Monoid (Last (..))
 import GHC.Generics
 import Test.DocTest
 import Test.Hspec
 import Test.QuickCheck
-import Test.QuickCheck.Arbitrary
 
 type Partial a = HKD a Last
 type WTF     a = HKD a []
@@ -180,16 +178,14 @@ partials
 
 partials = describe "HKD" do
   describe "Eq" do
-    it "is monotonic with respect to ordering (Partial)"
-      $ property \(x :: a) y -> (x <= y) == ((<=) `on` deconstruct @Last) x y
+    it "is monotonic with respect to ordering (Partial)" $ property \(x :: a) y ->
+      (x <= y) == ((<=) `on` deconstruct @Last) x y
 
-    it "is monotonic with respect to ordering (WTF)"
-      $ property \(x :: a) y -> (x <= y) == ((<=) `on` deconstruct @[]) x y
+    it "is monotonic with respect to ordering (WTF)" $ property \(x :: a) y ->
+      (x <= y) == ((<=) `on` deconstruct @[]) x y
 
-    it "round-trips"
-      $ property \(x :: a) ->
-          construct (deconstruct @Last x) == pure x
+    it "round-trips" $ property \(x :: a) ->
+      construct (deconstruct @Last x) == pure x
 
-    it "round-trips"
-      $ property \(x :: a) ->
-          construct (deconstruct @[] x) == pure x
+    it "round-trips" $ property \(x :: a) ->
+      construct (deconstruct @[] x) == pure x

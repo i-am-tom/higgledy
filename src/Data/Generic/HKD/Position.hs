@@ -34,7 +34,6 @@ import GHC.TypeLits (ErrorMessage (..), Nat, type (+), type (<=?), TypeError)
 import qualified Data.GenericLens.Internal as G
 import Data.GenericLens.Internal (type (<?))
 import qualified Data.Generics.Internal.VL.Lens as G
-import Data.Generics.Internal.Profunctor.Lens (ALens)
 
 -- | Product types /without/ named fields can't be addressed by field name (for
 -- very obvious reason), so we instead need to address them with their
