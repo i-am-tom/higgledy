@@ -171,7 +171,7 @@ class Tuple (f :: Type -> Type) (structure :: Type) (tuple :: Type)
   toTuple   :: HKD structure f -> tuple
   fromTuple :: tuple -> HKD structure f
 
-class Function tuple => GToTuple (rep :: Type -> Type) (tuple :: Type)
+class GToTuple (rep :: Type -> Type) (tuple :: Type)
     | rep -> tuple where
   gfromTuple :: tuple -> rep p
   gtoTuple   :: rep p -> tuple
@@ -186,7 +186,7 @@ instance (GToTuple left left', GToTuple right right')
   gfromTuple (x, y) = gfromTuple x :*: gfromTuple y
   gtoTuple (x :*: y) = (gtoTuple x, gtoTuple y)
 
-instance Function inner => GToTuple (K1 index inner) inner where
+instance GToTuple (K1 index inner) inner where
   gfromTuple = K1
   gtoTuple = unK1
 
