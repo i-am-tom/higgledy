@@ -53,8 +53,8 @@ example data types:
 module Example where
 
 import Control.Lens ((.~), (^.), (&), Const (..), Identity, anyOf)
-import Data.Funtor.Const (Const (..))
-import Data.Funtor.Identity (Identity (..))
+import Data.Functor.Const (Const (..))
+import Data.Functor.Identity (Identity (..))
 import Data.Generic.HKD
 import Data.Maybe (isJust, isNothing)
 import Data.Monoid (Last (..))
