@@ -14,6 +14,10 @@ import Control.Lens (Lens', (.~), (^.))
 import Data.Function ((&), on)
 import Data.Generic.HKD
 import Data.Monoid (Last (..))
+import Data.Barbie
+import Data.Barbie.Constraints (Dict)
+import Data.Functor.Product (Product (..))
+import Data.Functor.Identity (Identity (..))
 import GHC.Generics
 import Test.DocTest
 import Test.Hspec
@@ -189,3 +193,12 @@ partials = describe "HKD" do
 
     it "round-trips" $ property \(x :: a) ->
       construct (deconstruct @[] x) == pure x
+
+-- Just to test that `baddDicts` does what it's told.
+data Y = Y { getY :: Int } deriving (Generic, Show)
+
+test :: HKD Y (Product (Dict Num) Identity)
+test = baddDicts test
+  where
+    test :: HKD Y Identity
+    test = deconstruct @Identity (Y 10)

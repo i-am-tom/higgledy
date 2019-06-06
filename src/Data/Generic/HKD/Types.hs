@@ -266,33 +266,47 @@ instance (FunctorB (HKD structure), GProductB (Rep structure))
 
 -------------------------------------------------------------------------------
 
-class GConstraintsB (rep :: Type -> Type) where
+class GAllBC (rep :: Type -> Type) where
   type GAllB (c :: Type -> Constraint) rep :: Constraint
 
+class GConstraintsB (rep :: Type -> Type) where
   gbaddDicts :: GAllB c rep => GHKD_ f rep p -> GHKD_ (Dict c `Product` f) rep p
 
-instance GConstraintsB inner => GConstraintsB (M1 index meta inner) where
+instance GAllBC inner => GAllBC (M1 index meta inner) where
   type GAllB c (M1 index meta inner) = GAllB c inner
 
+instance GConstraintsB inner => GConstraintsB (M1 index meta inner) where
   gbaddDicts (M1 x) = M1 (gbaddDicts @inner x)
+
+instance (GAllBC left, GAllBC right) => GAllBC (left :*: right) where
+  type GAllB c (left :*: right) = (GAllB c left, GAllB c right)
 
 instance (GConstraintsB left, GConstraintsB right)
     => GConstraintsB (left :*: right) where
-  type GAllB c (left :*: right) = (GAllB c left, GAllB c right)
-
   gbaddDicts (left :*: right)
     = gbaddDicts @left left :*: gbaddDicts @right right
 
-instance c inner => GConstraintsB (K1 index inner) where
+instance GAllBC (K1 index inner) where
   type GAllB c (K1 index inner) = c inner
 
-  gbaddDicts (K1 x)
-    = K1 (Pair Dict x)
+instance GConstraintsB (K1 index inner) where
+  gbaddDicts (K1 x) = K1 (Pair Dict x)
 
-instance (FunctorB (HKD structure), GConstraintsB (Rep structure))
+instance
+    ( FunctorB (HKD structure)
+    , GConstraintsB (Rep structure)
+    , GAllBC (Rep structure)
+    )
     => ConstraintsB (HKD structure) where
   type AllB c (HKD structure) = GAllB c (Rep structure)
-  baddDicts (HKD x) = HKD (gbaddDicts @(Rep structure) x)
+
+  baddDicts
+    :: forall c f
+     . AllB c (HKD structure)
+    => HKD structure f
+    -> HKD structure (Dict c `Product` f)
+  baddDicts (HKD x)
+    = HKD (gbaddDicts @(Rep structure) x)
 
 -------------------------------------------------------------------------------
 
