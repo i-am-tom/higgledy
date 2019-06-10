@@ -27,6 +27,8 @@ module Data.Generic.HKD.Types
 
   , HKD_
   , GHKD_
+
+  , Tuple (..)
   ) where
 
 import Data.Barbie (ConstraintsB (..), FunctorB (..), ProductB (..), ProductBC (..), TraversableB (..))
