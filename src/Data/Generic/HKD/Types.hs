@@ -34,6 +34,7 @@ module Data.Generic.HKD.Types
 import Data.Barbie (ConstraintsB (..), FunctorB (..), ProductB (..), ProductBC (..), TraversableB (..))
 import Data.Barbie.Constraints (Dict (..))
 import Data.Function (on)
+import Data.Functor.Contravariant (Contravariant (..), phantom)
 import Data.Functor.Product (Product (..))
 import Data.Kind (Constraint, Type)
 import Data.Proxy (Proxy (..))
@@ -81,6 +82,13 @@ import Test.QuickCheck.Function (Function (..), functionMap)
 -- (,) [] []
 newtype HKD (structure :: Type) (f :: Type -> Type)
   = HKD { runHKD :: HKD_ f structure Void }
+
+instance (Contravariant (HKD_ f structure), Functor (HKD_ f structure))
+    => Generic (HKD structure f) where
+  type Rep (HKD structure f) = HKD_ f structure
+
+  from = phantom . runHKD
+  to   = HKD . phantom
 
 -------------------------------------------------------------------------------
 
