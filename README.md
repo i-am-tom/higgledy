@@ -264,12 +264,12 @@ eg14 = deconstruct @Identity triple ^. position @4
 ### Labels
 
 One neat trick we can do - thanks to the generic representation - is get the
-names of the fields into the functor we're using. The `label` function gives us
+names of the fields into the functor we're using. The `label` value gives us
 this interface:
 
 ```haskell
 eg15 :: Labels User
-eg15 = label eg13
+eg15 = label
 -- User
 --   { name = Const "name"
 --   , age = Const "age"

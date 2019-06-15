@@ -31,20 +31,20 @@ import GHC.TypeLits (ErrorMessage (..), KnownSymbol, TypeError, symbolVal)
 -- >>> import Data.Functor.Identity (Identity (..))
 --
 -- >>> data User = User { name :: String, age :: Int } deriving Generic
--- >>> label (deconstruct @Identity (User "Tom" 25))
+-- >>> label @User
 -- User {name = Const "name", age = Const "age"}
 class Label (structure :: Type) where
-  label :: HKD structure f -> HKD structure (Const String)
+  label :: HKD structure (Const String)
 
 class GLabels (rep :: Type -> Type) where
-  glabel :: GHKD_ f rep p -> GHKD_ (Const String) rep p
+  glabel :: GHKD_ (Const String) rep p
 
 instance GLabels inner => GLabels (D1 meta inner) where
-  glabel = M1 . glabel . unM1
+  glabel = M1 glabel
 
 instance GLabels inner
     => GLabels (C1 ('MetaCons name fixity 'True) inner) where
-  glabel = M1 . glabel . unM1
+  glabel = M1 glabel
 
 instance TypeError ('Text "You can't collect labels for a non-record type!")
     => GLabels (C1 ('MetaCons name fixity 'False) inner) where
@@ -52,13 +52,13 @@ instance TypeError ('Text "You can't collect labels for a non-record type!")
 
 instance KnownSymbol name
     => GLabels (S1 ('MetaSel ('Just name) i d c) (K1 index inner)) where
-  glabel _ = M1 (K1 (Const (symbolVal (Proxy @name))))
+  glabel = M1 (K1 (Const (symbolVal (Proxy @name))))
 
 instance (GLabels left, GLabels right) => GLabels (left :*: right) where
-  glabel (left :*: right) = glabel left :*: glabel right
+  glabel = glabel :*: glabel
 
 instance (Generic structure, GLabels (Rep structure)) => Label structure where
-  label = HKD . glabel . runHKD
+  label = HKD glabel
 
 -- | Because all HKD types are valid barbies, and we have the above mechanism
 -- for extracting field names, we can ask some pretty interesting questions.
@@ -90,8 +90,8 @@ labelsWhere
   -> HKD structure f
   -> [String]
 
-labelsWhere p xs
-  = getConst (btraverse go (label xs `bprod` xs))
+labelsWhere p
+  = getConst . btraverse go . bprod label
   where
     go :: Product (Const String) f a -> (Const [String]) (Maybe a)
     go (Pair (Const key) value) = Const if p value then [key] else []
