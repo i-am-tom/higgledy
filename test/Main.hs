@@ -11,13 +11,13 @@
 module Main where
 
 import Control.Lens (Lens', (.~), (^.))
-import Data.Function ((&), on)
-import Data.Generic.HKD
-import Data.Monoid (Last (..))
 import Data.Barbie
 import Data.Barbie.Constraints (Dict)
-import Data.Functor.Product (Product (..))
+import Data.Function ((&), on)
 import Data.Functor.Identity (Identity (..))
+import Data.Functor.Product (Product (..))
+import Data.Generic.HKD
+import Data.Monoid (Last (..))
 import GHC.Generics
 import Test.DocTest
 import Test.Hspec

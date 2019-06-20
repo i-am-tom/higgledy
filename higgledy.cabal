@@ -19,9 +19,7 @@ library
   exposed-modules:     Data.Generic.HKD
                        Data.Generic.HKD.Build
                        Data.Generic.HKD.Construction
-                       Data.Generic.HKD.Field
                        Data.Generic.HKD.Labels
-                       Data.Generic.HKD.Position
                        Data.Generic.HKD.Types
   -- other-modules:
   -- other-extensions:
