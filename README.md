@@ -9,7 +9,7 @@ When we work with [higher-kinded
 data](https://reasonablypolymorphic.com/blog/higher-kinded-data), we find
 ourselves writing types like:
 
-```haskell
+```{haskell, ignore}
 data User f
   = User
       { name :: f String
@@ -24,7 +24,7 @@ lot of boilerplate deriving to do. Wouldn't it be nice if we could get back to
 writing simple types as we know and love them, and get all this stuff for
 _free_?
 
-```haskell
+```{haskell, ignore}
 data User
   = User
       { name :: String
@@ -196,7 +196,7 @@ choice):
 ```haskell
 eg9 :: Partial User
 eg9 = eg0 & field @"name"      .~ pure "Evil Tom"
-          & field @"likesDogs" .~ pure False     
+          & field @"likesDogs" .~ pure False
 -- User
 --   { name      = Last {getLast = Just "Evil Tom"}
 --   , age       = Last {getLast = Nothing}
@@ -217,7 +217,7 @@ Finally, thanks to the fact that this library exploits some of the internals of
 `generic-lens`, we'll also get a nice type error when we mention a field that
 doesn't exist in our type:
 
-```haskell
+```{haskell, ignore}
 eg11 :: Identity ()
 eg11 = eg3 ^. field @"oops"
 -- error:
@@ -254,7 +254,7 @@ eg13 = eg9 & position @2 .~ pure 25
 Similarly, the internals here come to us courtesy of `generic-lens`, so the
 type errors are a delight:
 
-```haskell
+```{haskell, ignore}
 eg14 :: Identity ()
 eg14 = deconstruct @Identity triple ^. position @4
 -- error:

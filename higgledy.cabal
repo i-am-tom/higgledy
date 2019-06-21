@@ -42,3 +42,14 @@ test-suite test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
   default-language:    Haskell2010
+
+test-suite readme
+  build-depends:       base
+                     , barbies ^>= 1.1.0
+                     , lens ^>= 4.17
+                     , higgledy
+  main-is:             README.lhs
+  type:                exitcode-stdio-1.0
+  default-language:    Haskell2010
+  ghc-options:         -pgmL markdown-unlit -Wall
+  build-tool-depends:  markdown-unlit:markdown-unlit
