@@ -50,7 +50,7 @@ example data types:
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE DeriveGeneric    #-}
 {-# LANGUAGE TypeApplications #-}
-module Example where
+module Main where
 
 import Control.Lens ((.~), (^.), (&), Const (..), Identity, anyOf)
 import Data.Functor.Const (Const (..))
@@ -124,7 +124,7 @@ Of course, this method requires every field to be monoidal. If we try with
 `Identity`, for example, we're in trouble if all our fields aren't themselves
 monoids:
 
-```haskell
+```{haskell, ignore}
 eg2 :: Bare Triple
 eg2 = mempty
 -- error:
@@ -287,4 +287,15 @@ fields whose values satisfy some predicate:
 eg16 :: [String]
 eg16 = labelsWhere (isNothing . getLast) eg9
 -- ["age"]
+```
+
+### Documentation
+
+All the docs in this library are tested on `cabal new-test`. Furthermore, this
+README is tested by `markdown-unlit`. To keep _that_ happy, we do need a `main`
+in this file, so just ignore the following :)
+
+```haskell
+main :: IO ()
+main = pure ()
 ```
