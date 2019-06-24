@@ -15,6 +15,12 @@ Stability   : experimental
 module Data.Generic.HKD
   ( module Exports
 
+  , Barbie.ConstraintsB (..)
+  , Barbie.ConstraintsB (..)
+  , Barbie.FunctorB (..)
+  , Barbie.ProductBC (..)
+  , Barbie.TraversableB (..)
+
   , position
   , field
   ) where
@@ -23,6 +29,8 @@ import Data.Generic.HKD.Build        as Exports
 import Data.Generic.HKD.Construction as Exports
 import Data.Generic.HKD.Labels       as Exports
 import Data.Generic.HKD.Types        as Exports
+
+import qualified Data.Barbie as Barbie
 
 import qualified Data.Generics.Internal.VL.Lens as G
 import qualified Data.Generics.Product as G

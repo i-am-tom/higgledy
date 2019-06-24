@@ -11,7 +11,6 @@
 module Main where
 
 import Control.Lens (Lens', (.~), (^.))
-import Data.Barbie
 import Data.Barbie.Constraints (Dict)
 import Data.Function ((&), on)
 import Data.Functor.Identity (Identity (..))
