@@ -74,7 +74,7 @@ instance Applicative f => GConstruct f (K1 index inner) where
   gconstruct (K1 x) = fmap K1 x
   gdeconstruct (K1 x) = K1 (pure x)
 
-instance (Functor f, Generic structure, GConstruct f (Rep structure))
+instance (Applicative f, Generic structure, GConstruct f (Rep structure))
     => Construct f structure where
   construct   = fmap to . gconstruct . runHKD
   deconstruct = HKD . gdeconstruct @f . from
