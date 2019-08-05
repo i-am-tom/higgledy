@@ -25,6 +25,7 @@ library
   -- other-extensions:
   build-depends:       base ^>= 4.12
                      , barbies ^>= 1.1.0
+                     , generic-deriving ^>= 1.12
                      , generic-lens ^>= 1.1.0
                      , QuickCheck >= 2.12.6 && < 2.14
   hs-source-dirs:      src
