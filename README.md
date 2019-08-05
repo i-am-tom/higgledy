@@ -95,6 +95,10 @@ type Bare    a = HKD a  Identity      -- All must be present.
 type Labels  a = HKD a (Const String) -- Every field holds a string.
 ```
 
+_NB: as of GHC 8.8, the `Last` monoid will be removed in favour of `Compose
+Maybe Last` (using the `Last` in `Data.Semigroup`). Until then, I'll use `Last`
+for brevity, but you may wish to use this suggestion for future-proofing._
+
 ### Fresh objects
 
 When we want to start working with the `HKD` interface, we have a couple of
