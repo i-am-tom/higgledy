@@ -26,7 +26,7 @@ library
   build-depends:       base ^>= 4.12
                      , barbies ^>= 1.1.0
                      , generic-lens ^>= 1.1.0
-                     , QuickCheck ^>= 2.12.6
+                     , QuickCheck >= 2.12.6 && < 2.14
   hs-source-dirs:      src
   default-language:    Haskell2010
 
@@ -35,9 +35,9 @@ test-suite test
                      , barbies ^>= 1.1.0
                      , doctest ^>= 0.16.0
                      , higgledy
-                     , hspec ^>= 2.6.1
+                     , hspec >= 2.6.1 && < 2.8
                      , lens ^>= 4.17
-                     , QuickCheck ^>= 2.12.6
+                     , QuickCheck >= 2.12.6 && < 2.14
   main-is:             Main.hs
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test

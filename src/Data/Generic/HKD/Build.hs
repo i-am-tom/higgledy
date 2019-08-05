@@ -75,14 +75,14 @@ instance (Generic shape, GFill f with '[] (Rep shape))
 --   = User { name :: String, age :: Int, likesDogs :: Bool }
 --   deriving Generic
 -- :}
--- 
+--
 -- >>> :{
 -- test :: _
 -- test = build @User
 -- :}
 -- ...
--- ... • Found type wildcard ‘_’
--- ...     standing for ‘f [Char] -> f Int -> f Bool -> HKD User f’
+-- ... Found type wildcard ...
+-- ... standing for ...f [Char] -> f Int -> f Bool -> HKD User f...
 -- ...
 --
 -- Once we call the 'build' function, and indicate the type we want to build,

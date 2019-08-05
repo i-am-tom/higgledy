@@ -65,7 +65,7 @@ import qualified Data.Generics.Product as G
 -- >>> total & field @"oops" .~ pure ()
 -- ...
 -- ... error:
--- ... • The type HKD User Last does not contain a field named 'oops'.
+-- ... The type HKD User Last does not contain a field named 'oops'.
 -- ...
 field
   :: forall field f structure inner
@@ -91,8 +91,8 @@ field
 -- >>> deconstruct ("Hello", True) ^. position @4
 -- ...
 -- ... error:
--- ... • The type HKD
--- ...              ([Char], Bool) f does not contain a field at position 4
+-- ... The type HKD
+-- ... ([Char], Bool) f does not contain a field at position 4
 -- ...
 position
   :: forall index f structure inner
