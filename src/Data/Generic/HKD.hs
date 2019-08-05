@@ -16,7 +16,6 @@ module Data.Generic.HKD
   ( module Exports
 
   , Barbie.ConstraintsB (..)
-  , Barbie.ConstraintsB (..)
   , Barbie.FunctorB (..)
   , Barbie.ProductBC (..)
   , Barbie.TraversableB (..)
