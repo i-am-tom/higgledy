@@ -120,7 +120,10 @@ Other 'Alternative'-style functors lead to very different results:
 ```haskell
 eg1 :: Labels Triple
 eg1 = mempty
--- Triple (Const {getConst = ""}) (Const {getConst = ""}) (Const { getConst = ""})
+-- Triple
+--   Const ""
+--   Const ""
+--   Const ""
 ```
 
 Of course, this method requires every field to be monoidal. If we try with
@@ -153,7 +156,10 @@ behaviours:
 ```haskell
 eg4 :: Partial Triple
 eg4 = deconstruct @Last triple
--- Triple (Last {getLast = Just 123}) (Last {getLast = Just ()}) (Last {getLast = Just "ABC"})
+-- Triple
+--   Last {getLast = Just 123}
+--   Last {getLast = Just ()}
+--   Last {getLast = Just "ABC"}
 ```
 
 There's also `construct` for when we want to escape our `HKD` wrapper, and
@@ -208,8 +214,8 @@ eg10 :: Partial User
 eg10 = eg0 & field @"name"      .~ pure "Evil Tom"
            & field @"likesDogs" .~ pure False
 -- User
---   { name = Last {getLast = Just "Evil Tom"}
---   , age = Last {getLast = Nothing}
+--   { name      = Last {getLast = Just "Evil Tom"}
+--   , age       = Last {getLast = Nothing}
 --   , likesDogs = Last {getLast = Just False}
 --   }
 ```
@@ -243,7 +249,10 @@ product types:
 eg13 :: Labels Triple
 eg13 = mempty & position @1 .~ Const "hello"
               & position @2 .~ Const "world"
--- Triple (Const {getConst = "hello"}) (Const {getConst = "world"}) (Const {getConst = ""})
+-- Triple
+--   Const "hello"
+--   Const "world"
+--   Const ""
 ```
 
 Again, this is a `Lens`, so we can just as easily _set_ values:
@@ -252,8 +261,8 @@ Again, this is a `Lens`, so we can just as easily _set_ values:
 eg14 :: Partial User
 eg14 = eg10 & position @2 .~ pure 25
 -- User
---   { name = Last {getLast = Just "Evil Tom"}
---   , age = Last {getLast = Just 25}
+--   { name      = Last {getLast = Just "Evil Tom"}
+--   , age       = Last {getLast = Just 25}
 --   , likesDogs = Last {getLast = Just False}
 --   }
 ```

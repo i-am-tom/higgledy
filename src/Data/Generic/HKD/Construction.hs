@@ -47,7 +47,7 @@ import GHC.Generics
 -- We can also /deconstruct/ a tuple into a partial structure:
 --
 -- >>> deconstruct @[] ("Hello", True)
--- (,) (["Hello"],[True])
+-- (,) ["Hello"] [True]
 --
 -- These two methods also satisfy the round-tripping property:
 --

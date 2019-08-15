@@ -32,7 +32,7 @@ import GHC.TypeLits (ErrorMessage (..), KnownSymbol, TypeError, symbolVal)
 --
 -- >>> data User = User { name :: String, age :: Int } deriving Generic
 -- >>> label @User
--- User {name = Const {getConst = "name"}, age = Const {getConst = "age"}}
+-- User {name = Const "name", age = Const "age"}
 class Label (structure :: Type) where
   label :: HKD structure (Const String)
 

@@ -41,7 +41,6 @@ import Data.Proxy (Proxy (..))
 import Data.Void (Void)
 import GHC.Generics
 import GHC.TypeLits (KnownSymbol, symbolVal)
-import Generics.Deriving.Show (GShow' (..), gshowsPrecdefault)
 import Test.QuickCheck.Arbitrary (Arbitrary (..), CoArbitrary (..))
 import Test.QuickCheck.Function (Function (..), functionMap)
 
@@ -80,7 +79,7 @@ import Test.QuickCheck.Function (Function (..), functionMap)
 -- User {name = Last {getLast = Nothing}, age = Last {getLast = Nothing}}
 --
 -- >>> mempty @(HKD (Int, Bool) [])
--- (,) ([],[])
+-- (,) [] []
 newtype HKD (structure :: Type) (f :: Type -> Type)
   = HKD { runHKD :: HKD_ f structure Void }
 
@@ -139,9 +138,41 @@ instance (Generic structure, Function tuple, Tuple f structure tuple)
 
 -------------------------------------------------------------------------------
 
-instance (Generic (HKD structure f), GShow' (GHKD_ f (Rep structure)))
+class GShow (named :: Bool) (rep :: Type -> Type) where
+  gshow :: rep p -> String
+
+instance GShow named inner => GShow named (D1 meta inner) where
+  gshow = gshow @named . unM1
+
+instance (GShow 'True inner, KnownSymbol name)
+    => GShow any (C1 ('MetaCons name fixity 'True) inner) where
+  gshow (M1 x) = symbolVal (Proxy @name) <> " {" <> gshow @'True x <> "}"
+
+instance (GShow 'False inner, KnownSymbol name)
+    => GShow any (C1 ('MetaCons name fixity 'False) inner) where
+  gshow (M1 x) = symbolVal (Proxy @name) <> " " <> gshow @'False x
+
+instance (GShow 'True left, GShow 'True right)
+    => GShow 'True (left :*: right) where
+  gshow (left :*: right) = gshow @'True left <> ", " <> gshow @'True right
+
+instance (GShow 'False left, GShow 'False right)
+    => GShow 'False (left :*: right) where
+  gshow (left :*: right) = gshow @'False left <> " " <> gshow @'False right
+
+instance (GShow 'True inner, KnownSymbol field)
+    => GShow 'True (S1 ('MetaSel ('Just field) i d c) inner) where
+  gshow (M1 inner) = symbolVal (Proxy @field) <> " = " <> gshow @'True inner
+
+instance GShow 'False inner => GShow 'False (S1 meta inner) where
+  gshow (M1 inner) = gshow @'False inner
+
+instance (Show (f inner)) => GShow named (K1 R (f inner)) where
+  gshow (K1 x) = show x
+
+instance (Generic structure, GShow 'True (HKD_ f structure))
     => Show (HKD structure f) where
-  showsPrec = gshowsPrecdefault
+  show (HKD x) = gshow @'True x
 
 -------------------------------------------------------------------------------
 
