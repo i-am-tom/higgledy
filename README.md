@@ -38,7 +38,7 @@ type UserF f = HKD User f
 ```
 
 As an added little bonus, any `HKD`-wrapped object is automatically an instance
-of all the [Barbie](http://hackage.haskell.org/package/barbies) classes, so no
+of all the [Barbie](https://hackage.haskell.org/package/barbies) classes, so no
 need to derive anything more than `Generic`!
 
 ## API
@@ -188,7 +188,7 @@ eg7 = eg6 [1] [] ["Tom", "Tim"]
 ```
 
 Should we need to work with records, we can exploit the label trickery of the
-[`named`](http://hackage.haskell.org/package/named) package. The `record`
+[`named`](https://hackage.haskell.org/package/named) package. The `record`
 function behaves exactly as `build` does, but produces a function compatible
 with the `named` interface. After that, we can use the function with labels
 (and with no regard for the internal order):
@@ -201,7 +201,9 @@ eg8 :: "name"      :! f [Char]
 eg8 = record @User
 
 eg9 :: HKD User Maybe
-eg9 = eg8 ! #name (Just "Tom") ! #likesDogs (Just True) ! #age (Just 26)
+eg9 = eg8 ! #name (Just "Tom")
+          ! #likesDogs (Just True)
+          ! #age (Just 26)
 ```
 
 If you're _still_ not satisfied, check out the
@@ -314,7 +316,7 @@ eg18 = label
 ```
 
 By combining this with some of the
-[Barbies](http://hackage.haskell.org/package/barbies) interface (the entirety
+[Barbies](https://hackage.haskell.org/package/barbies) interface (the entirety
 of which is available to any `HKD`-wrapped type) such as `bprod` and `bmap`, we
 can implement functions such as `labelsWhere`, which returns the names of all
 fields whose values satisfy some predicate:
