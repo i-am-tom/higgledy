@@ -55,8 +55,6 @@ module Main where
 import Control.Applicative (Alternative (empty))
 import Control.Lens ((.~), (^.), (&), Const (..), Identity, anyOf)
 import Data.Barbie (ProductB (buniq))
-import Data.Functor.Const (Const (..))
-import Data.Functor.Identity (Identity (..))
 import Data.Generic.HKD
 import Data.Maybe (isJust, isNothing)
 import Data.Monoid (Last (..))
