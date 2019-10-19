@@ -20,6 +20,7 @@ library
                        Data.Generic.HKD.Build
                        Data.Generic.HKD.Construction
                        Data.Generic.HKD.Labels
+                       Data.Generic.HKD.Named
                        Data.Generic.HKD.Types
   -- other-modules:
   -- other-extensions:
@@ -27,6 +28,7 @@ library
                      , barbies ^>= 1.1.0
                      , generic-lens ^>= 1.1.0
                      , QuickCheck >= 2.12.6 && < 2.14
+                     , named ^>= 0.3.0.0
   hs-source-dirs:      src
   default-language:    Haskell2010
 
@@ -48,6 +50,7 @@ test-suite readme
                      , barbies ^>= 1.1.0
                      , lens ^>= 4.17
                      , higgledy
+                     , named ^>= 0.3.0.0
   main-is:             README.lhs
   type:                exitcode-stdio-1.0
   default-language:    Haskell2010

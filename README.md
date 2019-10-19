@@ -38,7 +38,7 @@ type UserF f = HKD User f
 ```
 
 As an added little bonus, any `HKD`-wrapped object is automatically an instance
-of all the [Barbie](http://hackage.haskell.org/package/barbies) classes, so no
+of all the [Barbie](https://hackage.haskell.org/package/barbies) classes, so no
 need to derive anything more than `Generic`!
 
 ## API
@@ -50,6 +50,8 @@ example data types:
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE DeriveGeneric    #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TypeOperators    #-}
 module Main where
 
 import Control.Applicative (Alternative (empty))
@@ -61,6 +63,7 @@ import Data.Generic.HKD
 import Data.Maybe (isJust, isNothing)
 import Data.Monoid (Last (..))
 import GHC.Generics (Generic)
+import Named ((:!), (!))
 
 -- An example of a record (with named fields):
 data User
@@ -72,7 +75,7 @@ data User
   deriving (Generic, Show)
 
 user :: User
-user = User "Tom" 25 True
+user = User "Tom" 26 True
 
 -- An example of a product (without named fields):
 data Triple
@@ -145,7 +148,7 @@ eg3 :: Bare User
 eg3 = deconstruct user
 -- User
 --   { name      = Identity "Tom"
---   , age       = Identity 25
+--   , age       = Identity 26
 --   , likesDogs = Identity True
 --   }
 ```
@@ -184,13 +187,32 @@ eg7 = eg6 [1] [] ["Tom", "Tim"]
 -- Triple [1] [] ["Tom","Tim"]
 ```
 
+Should we need to work with records, we can exploit the label trickery of the
+[`named`](https://hackage.haskell.org/package/named) package. The `record`
+function behaves exactly as `build` does, but produces a function compatible
+with the `named` interface. After that, we can use the function with labels
+(and with no regard for the internal order):
+
+```haskell
+eg8 :: "name"      :! f [Char]
+    -> "age"       :! f Int
+    -> "likesDogs" :! f Bool
+    -> HKD User f
+eg8 = record @User
+
+eg9 :: HKD User Maybe
+eg9 = eg8 ! #name (Just "Tom")
+          ! #likesDogs (Just True)
+          ! #age (Just 26)
+```
+
 If you're _still_ not satisfied, check out the
 [`buniq`](https://hackage.haskell.org/package/barbies-1.1.2.1/docs/Data-Barbie.html#v:buniq)
 method hiding in `barbies`:
 
 ```haskell
-eg8 :: HKD Triple []
-eg8 = buniq empty
+eg10 :: HKD Triple []
+eg10 = buniq empty
 -- Triple [] [] []
 ```
 
@@ -200,8 +222,8 @@ The `field` lens, when given a type-applied field name, allows us to focus on
 fields within a record:
 
 ```haskell
-eg9 :: Last Int
-eg9 = eg0 ^. field @"age"
+eg11 :: Last Int
+eg11 = eg0 ^. field @"age"
 -- Last {getLast = Nothing}
 ```
 
@@ -210,8 +232,8 @@ record (note that these set values will _also_ need to be in our functor of
 choice):
 
 ```haskell
-eg10 :: Partial User
-eg10 = eg0 & field @"name"      .~ pure "Evil Tom"
+eg12 :: Partial User
+eg12 = eg0 & field @"name"      .~ pure "Evil Tom"
            & field @"likesDogs" .~ pure False
 -- User
 --   { name      = Last {getLast = Just "Evil Tom"}
@@ -224,8 +246,8 @@ This also means, for example, we can check whether a particular value has been
 completed for a given partial type:
 
 ```haskell
-eg11 :: Bool
-eg11 = anyOf (field @"name") (isJust . getLast) eg0
+eg13 :: Bool
+eg13 = anyOf (field @"name") (isJust . getLast) eg0
 -- False
 ```
 
@@ -234,8 +256,8 @@ Finally, thanks to the fact that this library exploits some of the internals of
 doesn't exist in our type:
 
 ```{haskell, ignore}
-eg12 :: Identity ()
-eg12 = eg3 ^. field @"oops"
+eg14 :: Identity ()
+eg14 = eg3 ^. field @"oops"
 -- error:
 -- • The type User does not contain a field named 'oops'.
 ```
@@ -246,8 +268,8 @@ Just as with field names, we can use positions when working with non-record
 product types:
 
 ```haskell
-eg13 :: Labels Triple
-eg13 = mempty & position @1 .~ Const "hello"
+eg15 :: Labels Triple
+eg15 = mempty & position @1 .~ Const "hello"
               & position @2 .~ Const "world"
 -- Triple
 --   Const "hello"
@@ -258,11 +280,11 @@ eg13 = mempty & position @1 .~ Const "hello"
 Again, this is a `Lens`, so we can just as easily _set_ values:
 
 ```haskell
-eg14 :: Partial User
-eg14 = eg10 & position @2 .~ pure 25
+eg16 :: Partial User
+eg16 = eg12 & position @2 .~ pure 26
 -- User
 --   { name      = Last {getLast = Just "Evil Tom"}
---   , age       = Last {getLast = Just 25}
+--   , age       = Last {getLast = Just 26}
 --   , likesDogs = Last {getLast = Just False}
 --   }
 ```
@@ -271,8 +293,8 @@ Similarly, the internals here come to us courtesy of `generic-lens`, so the
 type errors are a delight:
 
 ```{haskell, ignore}
-eg15 :: Identity ()
-eg15 = deconstruct @Identity triple ^. position @4
+eg17 :: Identity ()
+eg17 = deconstruct @Identity triple ^. position @4
 -- error:
 -- • The type Triple does not contain a field at position 4
 ```
@@ -284,8 +306,8 @@ names of the fields into the functor we're using. The `label` value gives us
 this interface:
 
 ```haskell
-eg16 :: Labels User
-eg16 = label
+eg18 :: Labels User
+eg18 = label
 -- User
 --   { name = Const "name"
 --   , age = Const "age"
@@ -294,14 +316,14 @@ eg16 = label
 ```
 
 By combining this with some of the
-[Barbies](http://hackage.haskell.org/package/barbies) interface (the entirety
+[Barbies](https://hackage.haskell.org/package/barbies) interface (the entirety
 of which is available to any `HKD`-wrapped type) such as `bprod` and `bmap`, we
 can implement functions such as `labelsWhere`, which returns the names of all
 fields whose values satisfy some predicate:
 
 ```haskell
-eg17 :: [String]
-eg17 = labelsWhere (isNothing . getLast) eg10
+eg19 :: [String]
+eg19 = labelsWhere (isNothing . getLast) eg12
 -- ["age"]
 ```
 

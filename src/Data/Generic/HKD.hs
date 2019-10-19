@@ -27,6 +27,7 @@ module Data.Generic.HKD
 import Data.Generic.HKD.Build        as Exports
 import Data.Generic.HKD.Construction as Exports
 import Data.Generic.HKD.Labels       as Exports
+import Data.Generic.HKD.Named        as Exports
 import Data.Generic.HKD.Types        as Exports
 
 import qualified Data.Barbie as Barbie
