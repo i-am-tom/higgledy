@@ -26,16 +26,16 @@ module Data.Generic.HKD.Build
 
 import Data.Kind (Type)
 import Data.GenericLens.Internal (HList (..))
-import Data.Generic.HKD.Types (HKD (..), GHKD_)
+import Data.Generic.HKD.Types (HKD (..), GHKD_, Nested (..))
 import GHC.Generics
 import Prelude hiding (uncurry)
 
 class Fill (f :: Type -> Type) (structure :: Type) (types :: [Type])
-    | structure f -> types, types -> f where
+    | f structure -> types where
   fill :: HList types -> HKD structure f
 
 class GFill (f :: Type -> Type) (xs :: [Type]) (ys :: [Type]) (rep :: Type -> Type)
-    | xs rep -> ys, ys f rep -> xs, xs -> f where
+    | f xs rep -> ys, f ys rep -> xs where
   gfill :: HList xs -> (HList ys, GHKD_ f rep p)
 
 instance GFill f xs ys inner
@@ -50,7 +50,12 @@ instance (GFill f xs ys left, GFill f ys zs right)
 
     (zs, left :*: right)
 
-instance GFill f (f x ': xs) xs (Rec0 x) where
+instance inner ~ HKD x f
+    => GFill f (inner ': xs) xs (K1 index (Nested x)) where
+  gfill (x :> xs) = (xs, K1 x)
+
+instance {-# INCOHERENT #-} GHKD_ f (K1 index x) ~ K1 index (f x)
+    => GFill f (f x ': xs) xs (K1 index x) where
   gfill (x :> xs) = (xs, K1 x)
 
 instance (Generic shape, GFill f with '[] (Rep shape))
@@ -88,7 +93,7 @@ instance (Generic shape, GFill f with '[] (Rep shape))
 -- Once we call the 'build' function, and indicate the type we want to build,
 -- we are free to pick whichever 'f' we like and get to work!
 class Build (structure :: Type) (f :: Type -> Type) (k :: Type)
-    | f structure -> k where
+    | structure f -> k where
   build :: k
 
 class GBuild (f :: Type -> Type) (structure :: Type) (xs :: [Type]) (k :: Type)

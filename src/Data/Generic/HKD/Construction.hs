@@ -24,7 +24,7 @@ module Data.Generic.HKD.Construction
   ( Construct (..)
   ) where
 
-import Data.Generic.HKD.Types (HKD (..), GHKD_)
+import Data.Generic.HKD.Types (HKD (..), GHKD_, Nested (..))
 import Data.Kind (Type)
 import GHC.Generics
 
@@ -70,7 +70,13 @@ instance (Applicative f, GConstruct f left, GConstruct f right)
   gconstruct   (l :*: r) = (:*:) <$> gconstruct      l <*> gconstruct      r
   gdeconstruct (l :*: r) =           gdeconstruct @f l :*: gdeconstruct @f r
 
-instance Applicative f => GConstruct f (K1 index inner) where
+instance (Construct f inner, Applicative f)
+    => GConstruct f (K1 index (Nested inner)) where
+  gconstruct   (K1         x ) = fmap (K1 . Nested) (construct x)
+  gdeconstruct (K1 (Nested x)) = K1 (deconstruct x)
+
+instance (Applicative f, GHKD_ f (K1 index inner) ~ K1 index (f inner))
+    => GConstruct f (K1 index inner) where
   gconstruct (K1 x) = fmap K1 x
   gdeconstruct (K1 x) = K1 (pure x)
 

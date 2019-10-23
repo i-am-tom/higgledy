@@ -29,6 +29,7 @@ module Data.Generic.HKD.Types
   , HKD_
   , GHKD_
 
+  , Nested (..)
   , Tuple (..)
   ) where
 
@@ -224,17 +225,13 @@ instance (GFunctorB left, GFunctorB right)
     => GFunctorB (left :*: right) where
   gbmap f (left :*: right) = gbmap @left f left :*: gbmap @right f right
 
-instance FunctorB (HKD inner)
-    => GFunctorB (K1 index (Nested inner)) where
-  gbmap f (K1 x) = K1 (bmap f x)
-
 instance GFunctorB (K1 index inner) where
   gbmap f = K1 . f . unK1
 
 instance GFunctorB (Rep structure) => FunctorB (HKD structure) where
   bmap f = HKD . gbmap @(Rep structure) f . runHKD
 
--- -------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 -- 
 -- class GTraversableB (rep :: Type -> Type) where
 --   gbtraverse
