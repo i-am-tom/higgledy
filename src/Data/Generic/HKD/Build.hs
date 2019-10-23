@@ -50,7 +50,8 @@ instance (GFill f xs ys left, GFill f ys zs right)
 
     (zs, left :*: right)
 
-instance GFill f (f x ': xs) xs (Rec0 x) where
+instance GHKD_ f (K1 index x) ~ K1 index (f x)
+    => GFill f (f x ': xs) xs (K1 index x) where
   gfill (x :> xs) = (xs, K1 x)
 
 instance (Generic shape, GFill f with '[] (Rep shape))

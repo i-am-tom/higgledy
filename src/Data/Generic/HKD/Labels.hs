@@ -8,17 +8,17 @@
 {-# LANGUAGE RankNTypes             #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
 {-# LANGUAGE TypeApplications       #-}
+{-# LANGUAGE TypeFamilies           #-}
 {-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE UndecidableInstances   #-}
 module Data.Generic.HKD.Labels
   ( Label (..)
-  , labelsWhere
   ) where
 
 import Data.Barbie (ProductB (..), TraversableB (..))
 import Data.Functor.Const (Const (..))
 import Data.Functor.Product (Product (..))
-import Data.Generic.HKD.Types (HKD (..), GHKD_)
+import Data.Generic.HKD.Types (HKD (..), GHKD_, Nested (..))
 import Data.Kind (Type)
 import Data.Proxy (Proxy (..))
 import GHC.Generics
@@ -50,7 +50,14 @@ instance TypeError ('Text "You can't collect labels for a non-record type!")
     => GLabels (C1 ('MetaCons name fixity 'False) inner) where
   glabel = undefined
 
-instance KnownSymbol name
+instance (KnownSymbol name, Label inner)
+    => GLabels (S1 ('MetaSel ('Just name) i d c) (K1 index (Nested inner))) where
+  glabel = M1 (K1 label)
+
+instance {-# OVERLAPPABLE #-}
+    ( KnownSymbol name
+    , GHKD_ (Const String) (K1 index inner) ~ K1 index (Const String inner)
+    )
     => GLabels (S1 ('MetaSel ('Just name) i d c) (K1 index inner)) where
   glabel = M1 (K1 (Const (symbolVal (Proxy @name))))
 
@@ -59,39 +66,3 @@ instance (GLabels left, GLabels right) => GLabels (left :*: right) where
 
 instance (Generic structure, GLabels (Rep structure)) => Label structure where
   label = HKD glabel
-
--- | Because all HKD types are valid barbies, and we have the above mechanism
--- for extracting field names, we can ask some pretty interesting questions.
---
--- >>> import Control.Lens
--- >>> import Data.Maybe (isNothing)
--- >>> import Data.Monoid (Last (..))
--- >>> import Data.Generic.HKD
---
--- Let's imagine, for example, that we're half way through filling in a user's
--- details:
---
--- >>> data User = User { name :: String, age :: Int } deriving Generic
--- >>> test = mempty @(HKD User Last) & field @"name" .~ pure "Tom"
---
--- We want to send a JSON response back to the client containing the fields
--- that have yet to be finished. All we need to do is pick the fields where the
--- values are @Last Nothing@:
---
--- >>> labelsWhere (isNothing . getLast) test
--- ["age"]
-labelsWhere
-  :: forall structure f
-   . ( Label structure
-     , ProductB (HKD structure)
-     , TraversableB (HKD structure)
-     )
-  => (forall a. f a -> Bool)
-  -> HKD structure f
-  -> [String]
-
-labelsWhere p
-  = getConst . btraverse go . bprod label
-  where
-    go :: Product (Const String) f a -> (Const [String]) (Maybe a)
-    go (Pair (Const key) value) = Const if p value then [key] else []
