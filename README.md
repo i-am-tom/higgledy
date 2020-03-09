@@ -330,10 +330,11 @@ eg19 = labelsWhere (isNothing . getLast) eg12
 ### Documentation
 
 All the docs in this library are tested on `cabal new-test`. Furthermore, this
-README is tested by `markdown-unlit`. To keep _that_ happy, we do need a `main`
-in this file, so just ignore the following :)
+README is tested by `markdown-unlit`.
 
+<!--
 ```haskell
 main :: IO ()
 main = pure ()
 ```
+-->
