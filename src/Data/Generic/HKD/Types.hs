@@ -9,7 +9,6 @@
 {-# LANGUAGE RankNTypes             #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
 {-# LANGUAGE TypeApplications       #-}
-{-# LANGUAGE TypeFamilies           #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE UndecidableInstances   #-}
@@ -43,6 +42,25 @@ import GHC.Generics
 import GHC.TypeLits (KnownSymbol, symbolVal)
 import Test.QuickCheck.Arbitrary (Arbitrary (..), CoArbitrary (..))
 import Test.QuickCheck.Function (Function (..), functionMap)
+
+-- | If we only have one instance matching, say, @Eq (HKD User Maybe)@, GHC
+-- will "do us a favour" by auto-selecting this instance, and then looking for
+-- /its/ constraints. This means we end up with an error that suggests we need
+-- to add constraints like @(Eq tuple, Generic xs, Tuple f xs tuple)@. The
+-- problem is that all these things are built off the generic rep, and so are
+-- pretty much /always/ trivial. In that sense, the @Eq@ constraint here is
+-- more like a synonym for these internal classes, so the user doesn't have to
+-- see the ugliness.
+--
+-- The problem is that we want to /hide/ these constraints, so the user just
+-- sees the constraints they're used to seeing like @Eq@, @FunctorB@, and so
+-- on. To do that, we create a @Stuck@ type, and define distinct, overlapping
+-- instances for @HKD Stuck f@. Although GHC will never need these constraints
+-- (as we don't expose the type, so nothing can ever use them), it's enough
+-- that GHC can't assume we want the real instance, so it won't auto-expand to
+-- the real instance's constraints. It's a dirty trick, all credit for which
+-- goes to the fabulous @generic-lens@.
+data Stuck
 
 -- | Higher-kinded data (HKD) is the design pattern in which every field in our
 -- type is wrapped in some functor @f@:
@@ -118,9 +136,15 @@ instance (Semigroup tuple, Generic xs, Tuple f xs tuple)
     => Semigroup (HKD xs f) where
   x <> y = fromTuple (toTuple x <> toTuple y)
 
+instance {-# OVERLAPPING #-} Semigroup (HKD Stuck f) where
+  (<>) = undefined
+
 instance (Monoid tuple, Generic xs, Tuple f xs tuple)
     => Monoid (HKD xs f) where
   mempty = fromTuple mempty
+
+instance {-# OVERLAPPING #-} Monoid (HKD Stuck f) where
+  mempty = undefined
 
 -------------------------------------------------------------------------------
 
@@ -128,13 +152,22 @@ instance (Arbitrary tuple, GToTuple (HKD_ f structure) tuple)
     => Arbitrary (HKD structure f) where
   arbitrary = fmap (HKD . gfromTuple) arbitrary
 
+instance {-# OVERLAPPING #-} Arbitrary (HKD Stuck f) where
+  arbitrary = undefined
+
 instance (CoArbitrary tuple, GToTuple (HKD_ f structure) tuple)
     => CoArbitrary (HKD structure f) where
   coarbitrary (HKD x) = coarbitrary (gtoTuple x)
 
+instance {-# OVERLAPPING #-} CoArbitrary (HKD Stuck f) where
+  coarbitrary = undefined
+
 instance (Generic structure, Function tuple, Tuple f structure tuple)
     => Function (HKD structure f) where
   function = functionMap toTuple fromTuple
+
+instance {-# OVERLAPPING #-} Function (HKD Stuck f) where
+  function = undefined
 
 -------------------------------------------------------------------------------
 
@@ -173,6 +206,9 @@ instance (Show (f inner)) => GShow named (K1 R (f inner)) where
 instance (Generic structure, GShow 'True (HKD_ f structure))
     => Show (HKD structure f) where
   show (HKD x) = gshow @'True x
+
+instance {-# OVERLAPPING #-} Show (HKD Stuck f) where
+  show = undefined
 
 -------------------------------------------------------------------------------
 
@@ -223,6 +259,9 @@ instance GFunctorB (K1 index inner) where
 instance GFunctorB (Rep structure) => FunctorB (HKD structure) where
   bmap f = HKD . gbmap @(Rep structure) f . runHKD
 
+instance {-# OVERLAPPING #-} FunctorB (HKD Stuck) where
+  bmap _ = undefined
+
 -------------------------------------------------------------------------------
 
 class GTraversableB (rep :: Type -> Type) where
@@ -246,6 +285,9 @@ instance GTraversableB (K1 index inner) where
 instance (FunctorB (HKD structure), GTraversableB (Rep structure))
     => TraversableB (HKD structure) where
   btraverse f = fmap HKD . gbtraverse @(Rep structure) f . runHKD
+
+instance {-# OVERLAPPING #-} TraversableB (HKD Stuck) where
+  btraverse _ = undefined
 
 -------------------------------------------------------------------------------
 
@@ -273,6 +315,10 @@ instance (FunctorB (HKD structure), GProductB (Rep structure))
     => ProductB (HKD structure) where
   bprod (HKD x) (HKD y) = HKD (gbprod @(Rep structure) x y)
   buniq zero            = HKD (gbuniq @(Rep structure) zero)
+
+instance {-# OVERLAPPING #-} ProductB (HKD Stuck) where
+  bprod = undefined
+  buniq _ = undefined
 
 -------------------------------------------------------------------------------
 
