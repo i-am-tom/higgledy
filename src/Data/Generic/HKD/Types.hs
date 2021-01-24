@@ -31,8 +31,8 @@ module Data.Generic.HKD.Types
   , Tuple (..)
   ) where
 
-import Data.Barbie (ConstraintsB (..), FunctorB (..), ProductB (..), ProductBC (..), TraversableB (..))
-import Data.Barbie.Constraints (Dict (..))
+import Barbies (ConstraintsB (..), FunctorB (..), ApplicativeB (..), TraversableB (..))
+import Barbies.Constraints (Dict (..))
 import Data.Function (on)
 import Data.Functor.Contravariant (Contravariant (..), phantom)
 import Data.Functor.Product (Product (..))
@@ -176,6 +176,10 @@ instance (Generic structure, GShow 'True (HKD_ f structure))
 
 -------------------------------------------------------------------------------
 
+-- | Often, we can get instances by using an 'HKD' type's isomorphism with a
+-- certain size of tuple. This class witnesses the isomorphism with a certain
+-- tuple (specifically a nested tree of pairs) to allow us to derive "via"
+-- these shapes.
 class Tuple (f :: Type -> Type) (structure :: Type) (tuple :: Type)
     | f structure -> tuple where
   toTuple   :: HKD structure f -> tuple
@@ -249,30 +253,30 @@ instance (FunctorB (HKD structure), GTraversableB (Rep structure))
 
 -------------------------------------------------------------------------------
 
-class GProductB (rep :: Type -> Type) where
+class GApplicativeB (rep :: Type -> Type) where
   gbprod :: GHKD_ f rep p -> GHKD_ g rep p -> GHKD_ (f `Product` g) rep p
-  gbuniq :: (forall a. f a) -> GHKD_ f rep p
+  gbpure :: (forall a. f a) -> GHKD_ f rep p
 
-instance GProductB inner => GProductB (M1 index meta inner) where
+instance GApplicativeB inner => GApplicativeB (M1 index meta inner) where
   gbprod (M1 x) (M1 y) = M1 (gbprod @inner x y)
-  gbuniq zero = M1 (gbuniq @inner zero)
+  gbpure zero = M1 (gbpure @inner zero)
 
-instance (GProductB left, GProductB right)
-    => GProductB (left :*: right) where
+instance (GApplicativeB left, GApplicativeB right)
+    => GApplicativeB (left :*: right) where
   gbprod (leftX :*: rightX) (leftY :*: rightY)
     = gbprod @left leftX leftY :*: gbprod @right rightX rightY
 
-  gbuniq zero
-    = gbuniq @left zero :*: gbuniq @right zero
+  gbpure zero
+    = gbpure @left zero :*: gbpure @right zero
 
-instance GProductB (K1 index inner) where
+instance GApplicativeB (K1 index inner) where
   gbprod (K1 x) (K1 y) = K1 (Pair x y)
-  gbuniq zero = K1 zero
+  gbpure zero = K1 zero
 
-instance (FunctorB (HKD structure), GProductB (Rep structure))
-    => ProductB (HKD structure) where
+instance (FunctorB (HKD structure), GApplicativeB (Rep structure))
+    => ApplicativeB (HKD structure) where
   bprod (HKD x) (HKD y) = HKD (gbprod @(Rep structure) x y)
-  buniq zero            = HKD (gbuniq @(Rep structure) zero)
+  bpure zero            = HKD (gbpure @(Rep structure) zero)
 
 -------------------------------------------------------------------------------
 
@@ -317,25 +321,3 @@ instance
     -> HKD structure (Dict c `Product` f)
   baddDicts (HKD x)
     = HKD (gbaddDicts @(Rep structure) x)
-
--------------------------------------------------------------------------------
-
-class GProductBC (rep :: Type -> Type) where
-  gbdicts :: GAllB c rep => GHKD_ (Dict c) rep p
-
-instance GProductBC inner => GProductBC (M1 index meta inner) where
-  gbdicts = M1 gbdicts
-
-instance (GProductBC left, GProductBC right)
-    => GProductBC (left :*: right) where
-  gbdicts = gbdicts :*: gbdicts
-
-instance GProductBC (K1 index inner) where
-  gbdicts = K1 Dict
-
-instance
-    ( ProductB (HKD structure)
-    , ConstraintsB (HKD structure)
-    , GProductBC (Rep structure)
-    ) => ProductBC (HKD structure) where
-  bdicts = HKD gbdicts

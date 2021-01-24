@@ -11,14 +11,13 @@
 module Main where
 
 import Control.Lens (Lens', (.~), (^.))
-import Data.Barbie.Constraints (Dict)
+import Barbies.Constraints (Dict)
 import Data.Function ((&), on)
 import Data.Functor.Identity (Identity (..))
 import Data.Functor.Product (Product (..))
 import Data.Generic.HKD
 import Data.Monoid (Last (..))
 import GHC.Generics
-import Test.DocTest
 import Test.Hspec
 import Test.QuickCheck
 
@@ -26,53 +25,50 @@ type Partial a = HKD a Last
 type WTF     a = HKD a []
 
 main :: IO ()
-main = do
-  doctest ["src", "test"]
+main = hspec do
+  describe "Unnamed" do
+    eq         @(Partial Triple)
+    ord        @(Partial Triple)
+    semigroup  @(Partial Triple)
+    idempotent @(Partial Triple)
+    monoid     @(Partial Triple)
 
-  hspec do
-    describe "Unnamed" do
-      eq         @(Partial Triple)
-      ord        @(Partial Triple)
-      semigroup  @(Partial Triple)
-      idempotent @(Partial Triple)
-      monoid     @(Partial Triple)
+    eq        @(WTF Triple)
+    ord       @(WTF Triple)
+    semigroup @(WTF Triple)
+    monoid    @(WTF Triple)
 
-      eq        @(WTF Triple)
-      ord       @(WTF Triple)
-      semigroup @(WTF Triple)
-      monoid    @(WTF Triple)
+    lens @(Partial Triple) (position @1)
+    lens @(Partial Triple) (position @2)
+    lens @(Partial Triple) (position @3)
 
-      lens @(Partial Triple) (position @1)
-      lens @(Partial Triple) (position @2)
-      lens @(Partial Triple) (position @3)
+    lens @(WTF Triple) (position @1)
+    lens @(WTF Triple) (position @2)
+    lens @(WTF Triple) (position @3)
 
-      lens @(WTF Triple) (position @1)
-      lens @(WTF Triple) (position @2)
-      lens @(WTF Triple) (position @3)
+  describe "Named" do
+    eq         @(Partial Person)
+    ord        @(Partial Person)
+    semigroup  @(Partial Person)
+    idempotent @(Partial Person)
+    monoid     @(Partial Person)
 
-    describe "Named" do
-      eq         @(Partial Person)
-      ord        @(Partial Person)
-      semigroup  @(Partial Person)
-      idempotent @(Partial Person)
-      monoid     @(Partial Person)
+    eq        @(WTF Person)
+    ord       @(WTF Person)
+    semigroup @(WTF Person)
+    monoid    @(WTF Person)
 
-      eq        @(WTF Person)
-      ord       @(WTF Person)
-      semigroup @(WTF Person)
-      monoid    @(WTF Person)
+    lens @(WTF Person) (position @1)
+    lens @(WTF Person) (position @2)
+    lens @(WTF Person) (position @3)
 
-      lens @(WTF Person) (position @1)
-      lens @(WTF Person) (position @2)
-      lens @(WTF Person) (position @3)
+    lens @(Partial Person) (field @"name")
+    lens @(Partial Person) (field @"age")
+    lens @(Partial Person) (field @"likesDogs")
 
-      lens @(Partial Person) (field @"name")
-      lens @(Partial Person) (field @"age")
-      lens @(Partial Person) (field @"likesDogs")
-
-      lens @(WTF Person) (field @"name")
-      lens @(WTF Person) (field @"age")
-      lens @(WTF Person) (field @"likesDogs")
+    lens @(WTF Person) (field @"name")
+    lens @(WTF Person) (field @"age")
+    lens @(WTF Person) (field @"likesDogs")
 
 -------------------------------------------------------------------------------
 

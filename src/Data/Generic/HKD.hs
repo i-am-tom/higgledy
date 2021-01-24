@@ -15,10 +15,10 @@ Stability   : experimental
 module Data.Generic.HKD
   ( module Exports
 
-  , Barbie.ConstraintsB (..)
-  , Barbie.FunctorB (..)
-  , Barbie.ProductBC (..)
-  , Barbie.TraversableB (..)
+  , Barbies.ApplicativeB (..)
+  , Barbies.ConstraintsB (..)
+  , Barbies.FunctorB (..)
+  , Barbies.TraversableB (..)
 
   , position
   , field
@@ -30,7 +30,7 @@ import Data.Generic.HKD.Labels       as Exports
 import Data.Generic.HKD.Named        as Exports
 import Data.Generic.HKD.Types        as Exports
 
-import qualified Data.Barbie as Barbie
+import qualified Barbies
 
 import qualified Data.Generics.Internal.VL.Lens as G
 import qualified Data.Generics.Product as G

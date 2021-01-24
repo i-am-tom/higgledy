@@ -86,7 +86,7 @@ instance (Generic shape, GFill f with '[] (Rep shape))
 -- ...
 --
 -- Once we call the 'build' function, and indicate the type we want to build,
--- we are free to pick whichever 'f' we like and get to work!
+-- we are free to pick whichever @f@ we like and get to work!
 class Build (structure :: Type) (f :: Type -> Type) (k :: Type)
     | f structure -> k where
   build :: k

@@ -56,7 +56,6 @@ module Main where
 
 import Control.Applicative (Alternative (empty))
 import Control.Lens ((.~), (^.), (&), Const (..), Identity, anyOf)
-import Data.Barbie (ProductB (buniq))
 import Data.Generic.HKD
 import Data.Maybe (isJust, isNothing)
 import Data.Monoid (Last (..))
@@ -210,7 +209,7 @@ method hiding in `barbies`:
 
 ```haskell
 eg10 :: HKD Triple []
-eg10 = buniq empty
+eg10 = bpure empty
 -- Triple [] [] []
 ```
 

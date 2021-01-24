@@ -15,7 +15,7 @@ module Data.Generic.HKD.Labels
   , labelsWhere
   ) where
 
-import Data.Barbie (ProductB (..), TraversableB (..))
+import Barbies (ApplicativeB (..), TraversableB (..))
 import Data.Functor.Const (Const (..))
 import Data.Functor.Product (Product (..))
 import Data.Generic.HKD.Types (HKD (..), GHKD_)
@@ -83,7 +83,7 @@ instance (Generic structure, GLabels (Rep structure)) => Label structure where
 labelsWhere
   :: forall structure f
    . ( Label structure
-     , ProductB (HKD structure)
+     , ApplicativeB (HKD structure)
      , TraversableB (HKD structure)
      )
   => (forall a. f a -> Bool)
