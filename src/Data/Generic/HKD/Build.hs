@@ -25,7 +25,7 @@ module Data.Generic.HKD.Build
   ) where
 
 import Data.Kind (Type)
-import Data.GenericLens.Internal (HList (..))
+import Data.Generics.Product.Internal.HList (HList (..))
 import Data.Generic.HKD.Types (HKD (..), GHKD_)
 import GHC.Generics
 import Prelude hiding (uncurry)

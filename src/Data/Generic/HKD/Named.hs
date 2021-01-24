@@ -28,7 +28,7 @@ module Data.Generic.HKD.Named
 
 import Data.Functor.Contravariant (Contravariant (..))
 import Data.Generic.HKD.Types (HKD, HKD_)
-import Data.GenericLens.Internal (GUpcast (..))
+import Data.Generics.Product.Internal.Subtype (GUpcast (..))
 import Data.Kind (Type)
 import GHC.Generics
 import Named ((:!), NamedF (..))
