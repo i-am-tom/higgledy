@@ -1,4 +1,4 @@
-# Revision history for partial-structures
+# Revision history for higgledy
 
 ## 0.1.0.0 -- YYYY-mm-dd
 
