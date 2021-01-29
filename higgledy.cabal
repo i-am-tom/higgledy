@@ -1,7 +1,7 @@
 cabal-version: 2.4
 build-type: Custom
 name: higgledy
-version: 0.3.1.0
+version: 0.4.1.0
 synopsis: Partial types as a type constructor.
 description: Use the generic representation of an ADT to get a higher-kinded data-style interface automatically.
 homepage: https://github.com/i-am-tom/higgledy
