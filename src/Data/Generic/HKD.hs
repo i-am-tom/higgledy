@@ -88,11 +88,10 @@ field
 -- get some beautiful error messages when things go awry:
 --
 -- >>> import Data.Generic.HKD.Construction
--- >>> deconstruct ("Hello", True) ^. position @4
+-- >>> deconstruct ((), True) ^. position @4
 -- ...
 -- ... error:
--- ... The type HKD
--- ... ([Char], Bool) f does not contain a field at position 4
+-- ... The type HKD ((), Bool) f does not contain a field at position 4
 -- ...
 position
   :: forall index f structure inner
