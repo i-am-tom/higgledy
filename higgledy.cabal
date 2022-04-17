@@ -37,8 +37,8 @@ library
 
 test-suite doctests
   build-depends: base
-               , base-compat ^>= 0.11
-               , doctest ^>= 0.17
+               , base-compat >= 0.11 && < 0.13
+               , doctest >= 0.17 && < 0.20
                , higgledy
                , lens
                , QuickCheck
@@ -54,7 +54,7 @@ test-suite test
                      , barbies
                      , higgledy
                      , hspec >= 2.6.1 && < 2.8
-                     , lens >= 4.17 && < 5
+                     , lens >= 4.17 && < 5.2
                      , QuickCheck
   main-is:             Main.hs
   type:                exitcode-stdio-1.0
@@ -64,7 +64,7 @@ test-suite test
 test-suite readme
   build-depends:       base
                      , barbies
-                     , lens >= 4.17 && < 5
+                     , lens >= 4.17 && < 5.2
                      , higgledy
                      , named ^>= 0.3.0.0
   main-is:             README.lhs

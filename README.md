@@ -1,5 +1,7 @@
 # Higgledy 📚
 
+[![GitHub CI](https://github.com/i-am-tom/higgledy/workflows/CI/badge.svg)](https://github.com/i-am-tom/higgledy/actions)
+
 Higher-kinded data via generics: all\* the benefits, but none\* of the
 boilerplate.
 
