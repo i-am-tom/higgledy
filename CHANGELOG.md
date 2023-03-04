@@ -1,5 +1,5 @@
 # Revision history for higgledy
 
-## 0.1.0.0 -- YYYY-mm-dd
+## 4.2.1 -- 2023-03-04
 
-* First version. Released on an unsuspecting world.
+* Support for GHC 9.4
